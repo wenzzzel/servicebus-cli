@@ -8,6 +8,8 @@ internal static class DeadletterLogic
     internal static void Main(string[] args)
     {
         Console.WriteLine("It seems that you want to work with deadletters");
+        if(args.Length == 0)
+            HelpLogic.Main();
 
         switch (args[0])
         {
