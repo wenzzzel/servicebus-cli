@@ -1,15 +1,15 @@
 ﻿using Azure.Identity;
 using Azure.Messaging.ServiceBus;
 
-namespace servicebus_cli;
+namespace servicebus_cli.Arguments;
 
-internal static class DeadletterLogic
+internal static class Deadletter
 {
     internal static void Main(string[] args)
     {
         Console.WriteLine("It seems that you want to work with deadletters");
         if(args.Length == 0)
-            HelpLogic.Main();
+            Help.Main();
 
         switch (args[0])
         {
@@ -17,7 +17,7 @@ internal static class DeadletterLogic
                 Resend(args[1], args[2]);
                 break;
             default:
-                HelpLogic.Main();
+                Help.Main();
                 break;
         }
     }

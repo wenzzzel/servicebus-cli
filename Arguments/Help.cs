@@ -1,7 +1,7 @@
 ﻿
-namespace servicebus_cli;
+namespace servicebus_cli.Arguments;
 
-internal static class HelpLogic
+internal static class Help
 {
     public static void Main()
     {
