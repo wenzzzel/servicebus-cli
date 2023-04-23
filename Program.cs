@@ -1,14 +1,14 @@
-﻿using servicebus_cli.Arguments;
+﻿using servicebus_cli.Subjects;
 
 if(args.Length == 0)
-    Help.Main();
+    Help.Run();
 else
     switch (args[0])
     {
         case "deadletter":
-            Deadletter.Main(args.Skip(1).ToArray());
+            Deadletter.Run(args.Skip(1).ToArray());
             break;
         default:
-            Help.Main();
+            Help.Run();
             break;
     }
