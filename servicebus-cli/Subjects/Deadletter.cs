@@ -3,13 +3,16 @@ using Azure.Messaging.ServiceBus;
 
 namespace servicebus_cli.Subjects;
 
-internal static class Deadletter
+public static class Deadletter
 {
-    internal static void Run(string[] args)
+    public static void Run(string[] args)
     {
         Console.WriteLine("It seems that you want to work with deadletters");
-        if(args.Length == 0)
+        if (args.Length == 0)
+        {
             Help.Run();
+            return;
+        }
 
         switch (args[0])
         {

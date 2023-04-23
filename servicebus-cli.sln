@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "servicebus-cli", "servicebus-cli\servicebus-cli.csproj", "{AFA41C3B-57A6-4A04-A9B7-A09E5F787008}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "servicebus-cli.Tests", "servicebus-cli.Tests\servicebus-cli.Tests.csproj", "{1CE8F79B-D046-45C6-AF8D-19CDAD22F2A8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{AFA41C3B-57A6-4A04-A9B7-A09E5F787008}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AFA41C3B-57A6-4A04-A9B7-A09E5F787008}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AFA41C3B-57A6-4A04-A9B7-A09E5F787008}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CE8F79B-D046-45C6-AF8D-19CDAD22F2A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CE8F79B-D046-45C6-AF8D-19CDAD22F2A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CE8F79B-D046-45C6-AF8D-19CDAD22F2A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CE8F79B-D046-45C6-AF8D-19CDAD22F2A8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

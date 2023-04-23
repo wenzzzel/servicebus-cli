@@ -1,7 +1,7 @@
 ﻿
 namespace servicebus_cli.Subjects;
 
-internal static class Help
+public static class Help
 {
     public static void Run()
     {
