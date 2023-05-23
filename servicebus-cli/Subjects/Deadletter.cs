@@ -5,7 +5,7 @@ namespace servicebus_cli.Subjects;
 
 public static class Deadletter
 {
-    public static void Run(string[] args)
+    public async static Task Run(string[] args)
     {
         Console.WriteLine("It seems that you want to work with deadletters");
         if (args.Length == 0)
@@ -17,7 +17,7 @@ public static class Deadletter
         switch (args[0])
         {
             case "resend":
-                Resend(args[1], args[2]);
+                await Resend(args[1], args[2]);
                 break;
             default:
                 Help.Run();
@@ -25,7 +25,7 @@ public static class Deadletter
         }
     }
     
-    private async static void Resend(string FullyQualifiedNamespace, string EntityPath)
+    private async static Task Resend(string FullyQualifiedNamespace, string EntityPath)
     {
         Console.WriteLine($"It seems that you want to resend for {EntityPath} on {FullyQualifiedNamespace}");
         //var FullyQualifiedNamespace = "emea-grip-ip-async-sbus-prod.servicebus.windows.net";
