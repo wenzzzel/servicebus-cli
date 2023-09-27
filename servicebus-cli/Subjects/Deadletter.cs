@@ -7,7 +7,7 @@ public static class Deadletter
 {
     public async static Task Run(string[] args)
     {
-        Console.WriteLine("It seems that you want to work with deadletters");
+        Console.WriteLine(">deadletter");
         if (args.Length == 0)
         {
             Help.Run();
@@ -17,7 +17,7 @@ public static class Deadletter
         switch (args[0])
         {
             case "resend":
-                await Resend(args[1], args[2]);
+                await Resend(args[1], args[2], args[3]);
                 break;
             default:
                 Help.Run();
@@ -25,33 +25,37 @@ public static class Deadletter
         }
     }
     
-    private async static Task Resend(string FullyQualifiedNamespace, string EntityPath)
+    private async static Task Resend(string fullyQualifiedNamespace, string entityPath, string useSession = "N")
     {
-        Console.WriteLine($"It seems that you want to resend for {EntityPath} on {FullyQualifiedNamespace}");
+        if(useSession is not "N" or "Y")
+            useSession = "N";
+
+        Console.WriteLine($">resend fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}, useSessions: 1{useSession}");
         //var FullyQualifiedNamespace = "emea-grip-ip-async-sbus-prod.servicebus.windows.net";
         //var EntityPath = "deltavehicle";
 
-        var serviceBusClient = new ServiceBusClient(FullyQualifiedNamespace, new DefaultAzureCredential());
+        var serviceBusClient = new ServiceBusClient(fullyQualifiedNamespace, new DefaultAzureCredential());
 
-        var sender = serviceBusClient.CreateSender(EntityPath);
+        var sender = serviceBusClient.CreateSender(entityPath);
         var receiverOptions = new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter, ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete };
-        var receiver = serviceBusClient.CreateReceiver(EntityPath, receiverOptions);
+        var receiver = serviceBusClient.CreateReceiver(entityPath, receiverOptions);
 
         IReadOnlyList<ServiceBusReceivedMessage> messages;
         do
         {
             //IF YOU NEED TO BREAK THE DO-WHILE LOOP,
-            //MAKE SURE YOU'RE DOING THAT HERE ON LINE 19 USING A BREAKPOINT AND NOT WHILE THE LOOP IS RUNNING.
-            //BREAKING AFTER MESSAGES RECEIVED ON LINE 20 IN THE ITERATION WOULD LOOSE THAT DATA
-            messages = await receiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(10));
+            //MAKE SURE YOU'RE NOT DOING THAT INSIDE THE WHILE LOOP
+            //BREAKING AFTER MESSAGES RECEIVED (Inside the loop) WOULD LOOSE THAT DATA
+            messages = await receiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
             Console.WriteLine($"Received {messages.Count}");
             var tasks = new List<Task>();
             foreach (var message in messages)
             {
                 var sendMessage = new ServiceBusMessage(message);
-                //{
-                //    SessionId = message.SessionId, //Remove this if queue is not using sessions
-                //};
+
+                if (useSession == "Y")
+                    sendMessage.SessionId = message.SessionId;
+
                 tasks.Add(sender.SendMessageAsync(sendMessage));
             }
             await Task.WhenAll(tasks);

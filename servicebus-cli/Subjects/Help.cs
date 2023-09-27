@@ -12,6 +12,7 @@ public static class Help
                           "    - resend \n" +
                           "        - <FullyQualifiedNamespace> \n" +
                           "        - <EnitityPath> \n" + 
+                          "        - <UseSessions> (Y/N) \n" +
                           "Example: servicebus-cli deadletter resend <FullyQualifiedNamespace> <EnitityPath>");
     }
 }
