@@ -31,8 +31,6 @@ public static class Deadletter
             useSession = "N";
 
         Console.WriteLine($">resend fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}, useSessions: 1{useSession}");
-        //var FullyQualifiedNamespace = "emea-grip-ip-async-sbus-prod.servicebus.windows.net";
-        //var EntityPath = "deltavehicle";
 
         var serviceBusClient = new ServiceBusClient(fullyQualifiedNamespace, new DefaultAzureCredential());
 
