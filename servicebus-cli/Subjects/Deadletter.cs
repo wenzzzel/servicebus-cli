@@ -27,10 +27,10 @@ public static class Deadletter
     
     private async static Task Resend(string fullyQualifiedNamespace, string entityPath, string useSession = "N")
     {
-        if(useSession is not "N" or "Y")
+        if(useSession != "N" && useSession != "Y")
             useSession = "N";
 
-        Console.WriteLine($">resend fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}, useSessions: 1{useSession}");
+        Console.WriteLine($">resend fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}, useSessions: {useSession}");
 
         var serviceBusClient = new ServiceBusClient(fullyQualifiedNamespace, new DefaultAzureCredential());
 
