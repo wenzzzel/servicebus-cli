@@ -1,9 +1,14 @@
 ﻿
 namespace servicebus_cli.Subjects;
 
-public static class Help
+public interface IHelpService
 {
-    public static void Run()
+    void Run();
+}
+
+public class HelpService : IHelpService
+{
+    public void Run()
     {
         Console.WriteLine("Syntax: servicebus-cli <subject> <action> <parameter1> <parameterX> ... \n" +
                           "\n" +

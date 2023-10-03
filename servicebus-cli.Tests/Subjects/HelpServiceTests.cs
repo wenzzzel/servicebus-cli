@@ -2,22 +2,25 @@ using servicebus_cli.Subjects;
 
 namespace servicebus_cli.Tests.Subjects;
 
-public class DeadletterTests
+public class HelpServiceTests
 {
+    private HelpService _helpService;
+
     [SetUp]
     public void Setup()
     {
+        _helpService = new HelpService();
     }
 
     [Test]
-    public void Run_WhenProvidedWithEmptyArgs_DoesNotCrash()
+    public void Run_RunsWithoutCrashing()
     {
         //Arrange
-        var emptyArgs = new string[0];
-        
+
+
         //Act
-        Deadletter.Run(emptyArgs);
-        
+        _helpService.Run();
+
         //Assert
         Assert.Pass();
     }
