@@ -3,14 +3,26 @@ using Azure.Messaging.ServiceBus;
 
 namespace servicebus_cli.Subjects;
 
-public static class Deadletter
+public interface IDeadletterService
 {
-    public async static Task Run(string[] args)
+    Task Run(string[] args);
+}
+
+public class DeadletterService : IDeadletterService
+{
+    private readonly IHelpService helpService;
+
+    public DeadletterService(IHelpService helpService)
+    {
+        this.helpService = helpService;
+    }
+
+    public async Task Run(string[] args)
     {
         Console.WriteLine(">deadletter");
         if (args.Length == 0)
         {
-            Help.Run();
+            helpService.Run();
             return;
         }
 
@@ -20,7 +32,7 @@ public static class Deadletter
                 await Resend(args[1], args[2], args[3]);
                 break;
             default:
-                Help.Run();
+                helpService.Run();
                 break;
         }
     }

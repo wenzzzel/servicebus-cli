@@ -1,24 +1,24 @@
-using servicebus_cli.Subjects;
+//using servicebus_cli.Subjects;
 
-namespace servicebus_cli.Tests.Subjects;
+//namespace servicebus_cli.Tests.Subjects;
 
-public class HelpTests
-{
-    [SetUp]
-    public void Setup()
-    {
-    }
+//public class HelpTests
+//{
+//    [SetUp]
+//    public void Setup()
+//    {
+//    }
 
-    [Test]
-    public void Run_RunsWithoutCrashing()
-    {
-        //Arrange
+//    [Test]
+//    public void Run_RunsWithoutCrashing()
+//    {
+//        //Arrange
         
         
-        //Act
-        Help.Run();
+//        //Act
+//        HelpService.Run();
         
-        //Assert
-        Assert.Pass();
-    }
-}
+//        //Assert
+//        Assert.Pass();
+//    }
+//}

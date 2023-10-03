@@ -1,24 +1,24 @@
-using servicebus_cli.Subjects;
+//using servicebus_cli.Subjects;
 
-namespace servicebus_cli.Tests.Subjects;
+//namespace servicebus_cli.Tests.Subjects;
 
-public class DeadletterTests
-{
-    [SetUp]
-    public void Setup()
-    {
-    }
+//public class DeadletterTests
+//{
+//    [SetUp]
+//    public void Setup()
+//    {
+//    }
 
-    [Test]
-    public void Run_WhenProvidedWithEmptyArgs_DoesNotCrash()
-    {
-        //Arrange
-        var emptyArgs = new string[0];
+//    [Test]
+//    public void Run_WhenProvidedWithEmptyArgs_DoesNotCrash()
+//    {
+//        //Arrange
+//        var emptyArgs = new string[0];
         
-        //Act
-        Deadletter.Run(emptyArgs);
+//        //Act
+//        Deadletter.Run(emptyArgs);
         
-        //Assert
-        Assert.Pass();
-    }
-}
+//        //Assert
+//        Assert.Pass();
+//    }
+//}

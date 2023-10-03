@@ -1,4 +1,5 @@
-﻿using servicebus_cli.Subjects;
+﻿using Microsoft.Extensions.DependencyInjection;
+using servicebus_cli.Subjects;
 
 namespace servicebus_cli;
 
@@ -6,16 +7,24 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
+        var serviceProvider = new ServiceCollection()
+            .AddSingleton<IDeadletterService, DeadletterService>()
+            .AddSingleton<IHelpService, HelpService>()
+            .BuildServiceProvider();
+
+        var deadletterService = serviceProvider.GetService<IDeadletterService>();
+        var helpService = serviceProvider.GetService<IHelpService>();
+
         if (args.Length == 0)
-            Help.Run();
+            helpService.Run();
         else
             switch (args[0])
             {
                 case "deadletter":
-                    await Deadletter.Run(args.Skip(1).ToArray());
+                    await deadletterService.Run(args.Skip(1).ToArray());
                     break;
                 default:
-                    Help.Run();
+                    helpService.Run();
                     break;
             }
     }
