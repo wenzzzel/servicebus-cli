@@ -36,10 +36,10 @@ public class DeadletterService : IDeadletterService
                 break;
         }
     }
-    
+
     private async static Task Resend(string fullyQualifiedNamespace, string entityPath, string useSession = "N")
     {
-        if(useSession != "N" && useSession != "Y")
+        if (useSession != "N" && useSession != "Y")
             useSession = "N";
 
         Console.WriteLine($">resend fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}, useSessions: {useSession}");
