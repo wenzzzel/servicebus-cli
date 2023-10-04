@@ -12,7 +12,7 @@ public class DeadletterTests
         _deadletter = new Deadletter(_help.Object);
     }
 
-[Test]
+    [Test]
     public async Task Run_WhenProvidedWithEmptyArgs_DoesNotCrashAsync()
     {
         //Arrange
