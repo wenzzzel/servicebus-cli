@@ -1,15 +1,14 @@
-using servicebus_cli.Subjects;
 
 namespace servicebus_cli.Tests.Subjects;
 
-public class HelpServiceTests
+public class HelpTests
 {
-    private HelpService _helpService;
+    private Help _help;
 
     [SetUp]
     public void Setup()
     {
-        _helpService = new HelpService();
+        _help = new Help();
     }
 
     [Test]
@@ -19,7 +18,7 @@ public class HelpServiceTests
 
 
         //Act
-        _helpService.Run();
+        _help.Run();
 
         //Assert
         Assert.Pass();

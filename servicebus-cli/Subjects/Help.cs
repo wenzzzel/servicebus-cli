@@ -1,12 +1,12 @@
 ﻿
 namespace servicebus_cli.Subjects;
 
-public interface IHelpService
+public interface IHelp
 {
     void Run();
 }
 
-public class HelpService : IHelpService
+public class Help : IHelp
 {
     public void Run()
     {

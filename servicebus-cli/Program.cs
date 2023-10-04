@@ -8,23 +8,23 @@ public class Program
     public static async Task Main(string[] args)
     {
         var serviceProvider = new ServiceCollection()
-            .AddSingleton<IDeadletterService, DeadletterService>()
-            .AddSingleton<IHelpService, HelpService>()
+            .AddSingleton<IDeadletter, Deadletter>()
+            .AddSingleton<IHelp, Help>()
             .BuildServiceProvider();
 
-        var deadletterService = serviceProvider.GetService<IDeadletterService>();
-        var helpService = serviceProvider.GetService<IHelpService>();
+        var deadletter = serviceProvider.GetService<IDeadletter>();
+        var help = serviceProvider.GetService<IHelp>();
 
         if (args.Length == 0)
-            helpService.Run();
+            help.Run();
         else
             switch (args[0])
             {
                 case "deadletter":
-                    await deadletterService.Run(args.Skip(1).ToArray());
+                    await deadletter.Run(args.Skip(1).ToArray());
                     break;
                 default:
-                    helpService.Run();
+                    help.Run();
                     break;
             }
     }

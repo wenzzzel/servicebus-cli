@@ -3,16 +3,16 @@ using Azure.Messaging.ServiceBus;
 
 namespace servicebus_cli.Subjects;
 
-public interface IDeadletterService
+public interface IDeadletter
 {
     Task Run(string[] args);
 }
 
-public class DeadletterService : IDeadletterService
+public class Deadletter : IDeadletter
 {
-    private readonly IHelpService helpService;
+    private readonly IHelp helpService;
 
-    public DeadletterService(IHelpService helpService)
+    public Deadletter(IHelp helpService)
     {
         this.helpService = helpService;
     }
