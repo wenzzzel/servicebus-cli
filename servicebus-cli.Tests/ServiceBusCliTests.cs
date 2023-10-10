@@ -4,13 +4,15 @@ namespace servicebus_cli.Tests;
 public class ServiceBusCliTests
 {
     private ServiceBusCli cli;
-    private readonly Mock<IDeadletter> deadletterMock = new Mock<IDeadletter>();
-    private readonly Mock<IHelp> helpMock = new Mock<IHelp>();
+    private Mock<IDeadletter> _deadletterMock;
+    private Mock<IHelp> _helpMock;
 
     [SetUp]
     public void Setup()
     {
-        cli = new ServiceBusCli(deadletterMock.Object, helpMock.Object);
+        _deadletterMock = new Mock<IDeadletter>();
+        _helpMock = new Mock<IHelp>();
+        cli = new ServiceBusCli(_deadletterMock.Object, _helpMock.Object);
     }
 
     [Test]
@@ -23,7 +25,7 @@ public class ServiceBusCliTests
         await cli.Run(args);
 
         //Assert
-        helpMock.Verify(x => x.Run(), Times.Once());
+        _helpMock.Verify(x => x.Run(), Times.Once());
     }
 
     [Test]
@@ -36,7 +38,7 @@ public class ServiceBusCliTests
         await cli.Run(args);
 
         //Assert
-        helpMock.Verify(x => x.Run(), Times.Once());
+        _helpMock.Verify(x => x.Run(), Times.Once());
     }
 
     [Test]
@@ -50,7 +52,7 @@ public class ServiceBusCliTests
         await cli.Run(args);
 
         //Assert
-        deadletterMock.Verify(x => x.Run(expectedArgument), Times.Once());
-        helpMock.Verify(x => x.Run(), Times.Never());
+        _deadletterMock.Verify(x => x.Run(expectedArgument), Times.Once());
+        _helpMock.Verify(x => x.Run(), Times.Never());
     }
 }

@@ -5,13 +5,15 @@ namespace servicebus_cli.Tests.Subjects;
 
 public class DeadletterTests
 {
-    private Mock<IHelp> _help = new Mock<IHelp>();
-    private Mock<IServiceBusRepostitory> _serviceBusRespository = new Mock<IServiceBusRepostitory>();
+    private Mock<IHelp> _help;
+    private Mock<IServiceBusRepostitory> _serviceBusRespository;
     private Deadletter _deadletter;
 
     [SetUp]
     public void Setup()
     {
+        _help = new Mock<IHelp>();
+        _serviceBusRespository = new Mock<IServiceBusRepostitory>();
         _deadletter = new Deadletter(_help.Object, _serviceBusRespository.Object);
     }
 
