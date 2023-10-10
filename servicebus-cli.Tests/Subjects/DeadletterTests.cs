@@ -12,14 +12,31 @@ public class DeadletterTests
         _deadletter = new Deadletter(_help.Object);
     }
 
-    [Test]
-    public async Task Run_WhenProvidedWithEmptyArgs_DoesNotCrashAsync()
+    [TestCase(0)]
+    [TestCase(1)]
+    [TestCase(2)]
+    [TestCase(3)]
+    [TestCase(4)]
+    [TestCase(5)]
+    [TestCase(10)]
+    [TestCase(50)]
+    [TestCase(1000)]
+    public async Task Run_RegardlessOfNumberOfArguments_GivenThatArgument0IsResend_DoesNotCrashAsync(int argumentCount)
     {
         //Arrange
-        var emptyArgs = new string[0];
+        var arguments = new List<string>();
+        for(int i = 0; i < argumentCount; i++)
+        {
+            if (i == 0) 
+                arguments.Add("resend");
+            else 
+                arguments.Add("Random argument");
+        }
+
+        var args = arguments.ToArray();
 
         //Act
-        await _deadletter.Run(emptyArgs);
+        await _deadletter.Run(args);
 
         //Assert
         Assert.Pass();

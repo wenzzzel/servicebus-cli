@@ -20,7 +20,7 @@ public class Deadletter : IDeadletter
     public async Task Run(string[] args)
     {
         Console.WriteLine(">deadletter");
-        if (args.Length == 0)
+        if (args.Length is not 2 or 3)
         {
             helpService.Run();
             return;
@@ -29,7 +29,7 @@ public class Deadletter : IDeadletter
         switch (args[0])
         {
             case "resend":
-                await Resend(args[1], args[2], args[3]);
+                await Resend(args.Skip(1).ToList());
                 break;
             default:
                 helpService.Run();
@@ -37,8 +37,29 @@ public class Deadletter : IDeadletter
         }
     }
 
-    private async static Task Resend(string fullyQualifiedNamespace, string entityPath, string useSession = "N")
+    private async Task Resend(List<string> args)
     {
+        var fullyQualifiedNamespace = "";
+        var entityPath = "";
+        var useSession = "";
+
+        if (args.Count == 2)
+        {
+            fullyQualifiedNamespace = args[0];
+            entityPath = args[1];
+        }
+        else if (args.Count == 3) 
+        {
+            fullyQualifiedNamespace = args[0];
+            entityPath = args[1];
+            useSession = args[2];
+        }
+        else
+        {
+            helpService.Run();
+            return;
+        }
+
         if (useSession != "N" && useSession != "Y")
             useSession = "N";
 
