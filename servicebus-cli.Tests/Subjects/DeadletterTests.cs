@@ -1,15 +1,18 @@
 
+using servicebus_cli.Repositories;
+
 namespace servicebus_cli.Tests.Subjects;
 
 public class DeadletterTests
 {
     private Mock<IHelp> _help = new Mock<IHelp>();
+    private Mock<IServiceBusRepostitory> _serviceBusRespository = new Mock<IServiceBusRepostitory>();
     private Deadletter _deadletter;
 
     [SetUp]
     public void Setup()
     {
-        _deadletter = new Deadletter(_help.Object);
+        _deadletter = new Deadletter(_help.Object, _serviceBusRespository.Object);
     }
 
     [TestCase(0)]
@@ -25,11 +28,11 @@ public class DeadletterTests
     {
         //Arrange
         var arguments = new List<string>();
-        for(int i = 0; i < argumentCount; i++)
+        for (int i = 0; i < argumentCount; i++)
         {
-            if (i == 0) 
+            if (i == 0)
                 arguments.Add("resend");
-            else 
+            else
                 arguments.Add("Random argument");
         }
 
@@ -39,6 +42,21 @@ public class DeadletterTests
         await _deadletter.Run(args);
 
         //Assert
+        Assert.Pass();
+    }
+
+    [TestCase("resend", "<FullyQualifiedNamespace>", "<EnitityPath>")]
+    [TestCase("resend", "<FullyQualifiedNamespace>", "<EnitityPath>", "<UseSessions>")]
+    public async Task Run_WhenValidArgumentsAreProvided_GivenThatArgument0IsResend_DoesNotCallHelp(string arg1, string arg2, string arg3, string arg4 = null)
+    {
+        //Arrange
+        var args = new string[] { arg1, arg2, arg3, arg4 };
+
+        //Act
+        await _deadletter.Run(args);
+
+        //Assert
+        _help.Verify(x => x.Run(), Times.Never());
         Assert.Pass();
     }
 }
