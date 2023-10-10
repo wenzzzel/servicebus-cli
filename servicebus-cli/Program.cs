@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using servicebus_cli.Repositories;
 using servicebus_cli.Subjects;
 
 namespace servicebus_cli;
@@ -10,6 +11,7 @@ public class Program
         var serviceProvider = new ServiceCollection()
             .AddSingleton<IServiceBusCli, ServiceBusCli>()
             .AddSingleton<IDeadletter, Deadletter>()
+            .AddSingleton<IServiceBusRepostitory, ServiceBusRepository>()
             .AddSingleton<IHelp, Help>()
             .BuildServiceProvider();
 
