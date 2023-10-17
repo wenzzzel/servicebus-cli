@@ -1,5 +1,6 @@
 ﻿using Azure.Identity;
 using Azure.Messaging.ServiceBus;
+using Azure.Messaging.ServiceBus.Administration;
 
 namespace servicebus_cli.Repositories;
 
@@ -18,6 +19,11 @@ public class ServiceBusRepository : IServiceBusRepostitory
         var receiverOptions = new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter, ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete };
         var receiver = serviceBusClient.CreateReceiver(entityPath, receiverOptions);
 
+        ServiceBusAdministrationClient adminClient = new ServiceBusAdministrationClient(fullyQualifiedNamespace, new DefaultAzureCredential());
+        QueueRuntimeProperties properties = await adminClient.GetQueueRuntimePropertiesAsync(entityPath);
+        var dlTotalMessageCount = properties.DeadLetterMessageCount;
+
+        var resentDlCount = 0;
         IReadOnlyList<ServiceBusReceivedMessage> messages;
         do
         {
@@ -25,8 +31,8 @@ public class ServiceBusRepository : IServiceBusRepostitory
             //MAKE SURE YOU'RE NOT DOING THAT INSIDE THE WHILE LOOP
             //BREAKING AFTER MESSAGES RECEIVED (Inside the loop) WOULD LOOSE THAT DATA
             messages = await receiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
-            Console.WriteLine($"Received {messages.Count}");
             var tasks = new List<Task>();
+            
             foreach (var message in messages)
             {
                 var sendMessage = new ServiceBusMessage(message);
@@ -37,7 +43,8 @@ public class ServiceBusRepository : IServiceBusRepostitory
                 tasks.Add(sender.SendMessageAsync(sendMessage));
             }
             await Task.WhenAll(tasks);
-            Console.WriteLine($"Sent {messages.Count}");
-        } while (messages.Count > 0);
+            resentDlCount += messages.Count;
+            Console.WriteLine($"Sent {resentDlCount} / {dlTotalMessageCount}");
+        } while (messages.Count > 0 && resentDlCount < dlTotalMessageCount);
     }
 }
