@@ -23,6 +23,7 @@ public class ServiceBusRepository : IServiceBusRepostitory
         QueueRuntimeProperties properties = await adminClient.GetQueueRuntimePropertiesAsync(entityPath);
         var dlTotalMessageCount = properties.DeadLetterMessageCount;
 
+        Console.WriteLine("WARNING: Stopping the application before it's finished may result in data loss!");
         var resentDlCount = 0;
         IReadOnlyList<ServiceBusReceivedMessage> messages;
         do
