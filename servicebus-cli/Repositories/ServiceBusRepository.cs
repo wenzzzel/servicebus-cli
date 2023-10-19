@@ -1,12 +1,14 @@
 ﻿using Azure.Identity;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
+using System.Text.RegularExpressions;
 
 namespace servicebus_cli.Repositories;
 
 public interface IServiceBusRepostitory
 {
     Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, string useSession);
+    Task ListQueues(string fullyQualifiedNamespace, string filter = "");
 }
 
 public class ServiceBusRepository : IServiceBusRepostitory
@@ -48,6 +50,42 @@ public class ServiceBusRepository : IServiceBusRepostitory
         if (resentDlCount > dlTotalMessageCount)
         {
             Console.WriteLine($"INFO: The count of resent messages ({resentDlCount}) was greater then the initial deadletter count ({dlTotalMessageCount}). This may happen due to that deadletters are re-sent and end up on the deadletter queue again, before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent.");
+        }
+    }
+
+    public async Task ListQueues(string fullyQualifiedNamespace, string filter = "")
+    {
+        ServiceBusAdministrationClient adminClient = new ServiceBusAdministrationClient(fullyQualifiedNamespace, new DefaultAzureCredential());
+
+        var queues = adminClient.GetQueuesAsync();
+
+        await foreach (var queue in queues)
+        {
+            var regex = $".*{filter}.*";
+            Match match = Regex.Match(queue.Name, regex, RegexOptions.IgnoreCase);
+
+            if (!match.Success)
+                continue;
+
+            QueueRuntimeProperties properties = await adminClient.GetQueueRuntimePropertiesAsync(queue.Name);
+            var activeMessageCount = properties.ActiveMessageCount;
+            var deadLetterMessageCount = properties.DeadLetterMessageCount;
+            var scheduledMessageCount = properties.ScheduledMessageCount;
+
+            Console.Write($"{queue.Name} (");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write($"{activeMessageCount}");
+            Console.ResetColor();
+            Console.Write($", ");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write($"{deadLetterMessageCount}");
+            Console.ResetColor();
+            Console.Write($", ");
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.Write($"{scheduledMessageCount}");
+            Console.ResetColor();
+            Console.Write($")");
+            Console.WriteLine();
         }
     }
 }

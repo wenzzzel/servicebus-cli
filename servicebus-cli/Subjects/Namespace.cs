@@ -22,7 +22,7 @@ public class Namespace : INamespace
     public async Task Run(string[] args)
     {
         Console.WriteLine(">namespace");
-        if (args.Length is not 1)
+        if (args.Length is not 2 and not 3)
         {
             _helpService.Run();
             return;
@@ -41,6 +41,28 @@ public class Namespace : INamespace
 
     private async Task List(List<string> args)
     {
+        var fullyQualifiedNamespace = "";
+        var filter = "";
 
+        switch (args.Count)
+        {
+            case 1:
+                fullyQualifiedNamespace = args[0];
+                break;
+            case 2:
+                fullyQualifiedNamespace = args[0];
+                filter = args[1];
+                break;
+            default:
+                _helpService.Run();
+                return;
+        }
+
+        if (string.IsNullOrEmpty(fullyQualifiedNamespace))
+            _helpService.Run();
+
+        Console.WriteLine($">list fullyQualifiedNamespace: {fullyQualifiedNamespace}, filter: {filter}");
+
+        await _serviceBusRepostitory.ListQueues(fullyQualifiedNamespace, filter);
     }
 }
