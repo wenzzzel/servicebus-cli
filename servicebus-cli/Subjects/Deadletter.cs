@@ -46,24 +46,23 @@ public class Deadletter : IDeadletter
         var entityPath = "";
         var useSession = "";
 
-        if (args.Count == 2)
+        switch (args.Count)
         {
-            fullyQualifiedNamespace = args[0];
-            entityPath = args[1];
-        }
-        else if (args.Count == 3) 
-        {
-            fullyQualifiedNamespace = args[0];
-            entityPath = args[1];
-            useSession = args[2];
-        }
-        else
-        {
-            _helpService.Run();
-            return;
+            case 2:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                break;
+            case 3:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                useSession = args[2];
+                break;
+            default:
+                _helpService.Run();
+                return;
         }
 
-        if (useSession != "N" && useSession != "Y")
+        if (useSession != "Y")
             useSession = "N";
 
         Console.WriteLine($">resend fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}, useSessions: {useSession}");
