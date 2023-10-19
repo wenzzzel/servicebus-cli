@@ -28,9 +28,6 @@ public class ServiceBusRepository : IServiceBusRepostitory
         IReadOnlyList<ServiceBusReceivedMessage> messages;
         do
         {
-            //IF YOU NEED TO BREAK THE DO-WHILE LOOP,
-            //MAKE SURE YOU'RE NOT DOING THAT INSIDE THE WHILE LOOP
-            //BREAKING AFTER MESSAGES RECEIVED (Inside the loop) WOULD LOOSE THAT DATA
             messages = await receiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
             var tasks = new List<Task>();
             
