@@ -1,4 +1,3 @@
-
 using servicebus_cli.Repositories;
 
 namespace servicebus_cli.Tests.Subjects;
