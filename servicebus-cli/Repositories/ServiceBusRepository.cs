@@ -1,6 +1,7 @@
 ﻿using Azure.Identity;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace servicebus_cli.Repositories;
@@ -72,7 +73,8 @@ public class ServiceBusRepository : IServiceBusRepostitory
             var deadLetterMessageCount = properties.DeadLetterMessageCount;
             var scheduledMessageCount = properties.ScheduledMessageCount;
 
-            Console.Write($"{queue.Name} (");
+            Console.OutputEncoding = Encoding.UTF8;
+            Console.Write($" 📮 {queue.Name} (");
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write($"{activeMessageCount}");
             Console.ResetColor();
