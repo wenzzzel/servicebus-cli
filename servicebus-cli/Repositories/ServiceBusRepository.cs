@@ -44,5 +44,10 @@ public class ServiceBusRepository : IServiceBusRepostitory
             resentDlCount += messages.Count;
             Console.WriteLine($"Sent {resentDlCount} / {dlTotalMessageCount}");
         } while (messages.Count > 0 && resentDlCount < dlTotalMessageCount);
+
+        if (resentDlCount > dlTotalMessageCount)
+        {
+            Console.WriteLine($"INFO: The count of resent messages ({resentDlCount}) was greater then the initial deadletter count ({dlTotalMessageCount}). This may happen due to that deadletters are re-sent and end up on the deadletter queue again, before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent.");
+        }
     }
 }
