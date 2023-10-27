@@ -18,7 +18,7 @@ public class Help : IHelp
                           "        - <FullyQualifiedNamespace> \n" +
                           "        - <EnitityPath> \n" + 
                           "        - <UseSessions> (Y/N) \n" +
-                          " - namespace \n" +
+                          " - queue \n" +
                           "    - list \n" +
                           "        - <FullyQualifiedNamespace> \n" +
                           "        - <Filter> \n" +

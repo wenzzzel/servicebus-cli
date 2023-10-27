@@ -2,18 +2,18 @@ using servicebus_cli.Repositories;
 
 namespace servicebus_cli.Tests.Subjects;
 
-public class NamespaceTests
+public class QueueTests
 {
     private Mock<IHelp> _help;
     private Mock<IServiceBusRepostitory> _serviceBusRespository;
-    private Namespace _namespace;
+    private Queue _queue;
 
     [SetUp]
     public void Setup()
     {
         _help = new Mock<IHelp>();
         _serviceBusRespository = new Mock<IServiceBusRepostitory>();
-        _namespace = new Namespace(_help.Object, _serviceBusRespository.Object);
+        _queue = new Queue(_help.Object, _serviceBusRespository.Object);
     }
 
     [Test]
@@ -23,7 +23,7 @@ public class NamespaceTests
         var myArgs = Array.Empty<string>();
 
         //Act
-        await _namespace.Run(myArgs);
+        await _queue.Run(myArgs);
 
         //Assert
         _help.Verify(x => x.Run(), Times.Once);
@@ -38,7 +38,7 @@ public class NamespaceTests
         var myArgs = new string[] { action, fullyQualifiedNamespace };
 
         //Act
-        await _namespace.Run(myArgs);
+        await _queue.Run(myArgs);
 
         //Assert
         _help.Verify(x => x.Run(), Times.Once);
@@ -51,7 +51,7 @@ public class NamespaceTests
         var myArgs = new string[] { action, "fullyQualifiedNamespace" };
 
         //Act
-        await _namespace.Run(myArgs);
+        await _queue.Run(myArgs);
 
         //Assert
         _help.Verify(x => x.Run(), Times.Never);
@@ -64,7 +64,7 @@ public class NamespaceTests
         var myArgs = new string[] { "list", "fullyQualifiedNamespace" };
 
         //Act
-        await _namespace.Run(myArgs);
+        await _queue.Run(myArgs);
 
         //Assert
         _serviceBusRespository.Verify(x => x.ListQueues(It.IsAny<string>(), It.IsAny<string>()), Times.Once);

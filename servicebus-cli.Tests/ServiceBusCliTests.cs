@@ -5,16 +5,16 @@ public class ServiceBusCliTests
 {
     private ServiceBusCli cli;
     private Mock<IDeadletter> _deadletterMock;
-    private Mock<INamespace> _namespaceMock;
+    private Mock<IQueue> _queueMock;
     private Mock<IHelp> _helpMock;
 
     [SetUp]
     public void Setup()
     {
         _deadletterMock = new Mock<IDeadletter>();
-        _namespaceMock = new Mock<INamespace>();
+        _queueMock = new Mock<IQueue>();
         _helpMock = new Mock<IHelp>();
-        cli = new ServiceBusCli(_deadletterMock.Object, _helpMock.Object, _namespaceMock.Object);
+        cli = new ServiceBusCli(_deadletterMock.Object, _helpMock.Object, _queueMock.Object);
     }
 
     [Test]
