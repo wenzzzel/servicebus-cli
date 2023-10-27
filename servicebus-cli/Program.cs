@@ -11,6 +11,7 @@ public class Program
         var serviceProvider = new ServiceCollection()
             .AddSingleton<IServiceBusCli, ServiceBusCli>()
             .AddSingleton<IDeadletter, Deadletter>()
+            .AddSingleton<IQueue, Queue>()
             .AddSingleton<IServiceBusRepostitory, ServiceBusRepository>()
             .AddSingleton<IHelp, Help>()
             .BuildServiceProvider();

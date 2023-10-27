@@ -10,13 +10,14 @@ public interface IServiceBusCli
 public class ServiceBusCli : IServiceBusCli
 {
     private IDeadletter _deadletter;
+    private IQueue queue;
     private IHelp _help;
 
-    public ServiceBusCli(IDeadletter deadletter, IHelp help)
+    public ServiceBusCli(IDeadletter deadletter, IHelp help, IQueue queue)
     {
-
         _help = help;
         _deadletter = deadletter;
+        this.queue = queue;
     }
 
     public async Task Run(string[] args)
@@ -28,6 +29,9 @@ public class ServiceBusCli : IServiceBusCli
             {
                 case "deadletter":
                     await _deadletter.Run(args.Skip(1).ToArray());
+                    break;
+                case "queue":
+                    await queue.Run(args.Skip(1).ToArray());
                     break;
                 default:
                     _help.Run();
