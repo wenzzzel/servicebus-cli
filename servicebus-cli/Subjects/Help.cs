@@ -22,6 +22,9 @@ public class Help : IHelp
                           "    - list \n" +
                           "        - <FullyQualifiedNamespace> \n" +
                           "        - <Filter> \n" +
+                          "    - show \n" +
+                          "        - <FullyQualifiedNamespace> \n" +
+                          "        - <QueueName> \n" +
                           "Example: servicebus-cli deadletter resend <FullyQualifiedNamespace> <EnitityPath>");
     }
 }
