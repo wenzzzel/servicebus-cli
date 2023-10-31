@@ -10,6 +10,7 @@ public interface IServiceBusRepostitory
 {
     Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, string useSession);
     Task ListQueues(string fullyQualifiedNamespace, string filter = "");
+    Task ShowQueue(string fullyQualifiedNamespace, string queueName);
 }
 
 public class ServiceBusRepository : IServiceBusRepostitory
@@ -89,5 +90,34 @@ public class ServiceBusRepository : IServiceBusRepostitory
             Console.Write($")");
             Console.WriteLine();
         }
+    }
+
+    public async Task ShowQueue(string fullyQualifiedNamespace, string queueName)
+    {
+        ServiceBusAdministrationClient adminClient = new ServiceBusAdministrationClient(fullyQualifiedNamespace, new DefaultAzureCredential());
+
+        var res = await adminClient.GetQueueAsync(queueName);
+        var queue = res.Value;
+
+        QueueRuntimeProperties properties = await adminClient.GetQueueRuntimePropertiesAsync(queue.Name);
+        var activeMessageCount = properties.ActiveMessageCount;
+        var deadLetterMessageCount = properties.DeadLetterMessageCount;
+        var scheduledMessageCount = properties.ScheduledMessageCount;
+
+        Console.OutputEncoding = Encoding.UTF8;
+        Console.Write($" 📮 {queue.Name} (");
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.Write($"{activeMessageCount}");
+        Console.ResetColor();
+        Console.Write($", ");
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Write($"{deadLetterMessageCount}");
+        Console.ResetColor();
+        Console.Write($", ");
+        Console.ForegroundColor = ConsoleColor.Blue;
+        Console.Write($"{scheduledMessageCount}");
+        Console.ResetColor();
+        Console.Write($")");
+        Console.WriteLine();
     }
 }

@@ -33,6 +33,9 @@ public class Queue : IQueue
             case "list":
                 await List(args.Skip(1).ToList());
                 break;
+            case "show":
+                await Show(args.Skip(1).ToList());
+                break;
             default:
                 _helpService.Run();
                 break;
@@ -64,5 +67,32 @@ public class Queue : IQueue
         Console.WriteLine($">list fullyQualifiedNamespace: {fullyQualifiedNamespace}, filter: {filter}");
 
         await _serviceBusRepostitory.ListQueues(fullyQualifiedNamespace, filter);
+    }
+
+    private async Task Show(List<string> args)
+    {
+        var fullyQualifiedNamespace = "";
+        var queueName = "";
+
+        switch (args.Count)
+        {
+            case 1:
+                fullyQualifiedNamespace = args[0];
+                break;
+            case 2:
+                fullyQualifiedNamespace = args[0];
+                queueName = args[1];
+                break;
+            default:
+                _helpService.Run();
+                return;
+        }
+
+        if (string.IsNullOrEmpty(fullyQualifiedNamespace))
+            _helpService.Run();
+
+        Console.WriteLine($">show fullyQualifiedNamespace: {fullyQualifiedNamespace}, queue: {queueName}");
+
+        await _serviceBusRepostitory.ShowQueue(fullyQualifiedNamespace, queueName);
     }
 }

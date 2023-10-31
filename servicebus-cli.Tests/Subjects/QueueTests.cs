@@ -44,7 +44,8 @@ public class QueueTests
         _help.Verify(x => x.Run(), Times.Once);
     }
 
-    [TestCase("list")] // When more valid actions appear, add them here
+    [TestCase("list")]
+    [TestCase("show")] // When more valid actions appear, add them here
     public async Task Run_WhenCalledWithValidAction_DoesNotCallHelp(string action)
     {
         //Arrange
@@ -68,6 +69,19 @@ public class QueueTests
 
         //Assert
         _serviceBusRespository.Verify(x => x.ListQueues(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Test]
+    public async Task Run_WhenCalledWithShowAction_CallsShowQueueOnce()
+    {
+        //Arrange
+        var myArgs = new string[] { "show", "fullyQualifiedNamespace" };
+
+        //Act
+        await _queue.Run(myArgs);
+
+        //Assert
+        _serviceBusRespository.Verify(x => x.ShowQueue(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
     }
 
 }
