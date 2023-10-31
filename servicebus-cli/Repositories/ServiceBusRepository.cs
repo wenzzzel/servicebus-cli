@@ -10,6 +10,7 @@ public interface IServiceBusRepostitory
 {
     Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, string useSession);
     Task ListQueues(string fullyQualifiedNamespace, string filter = "");
+    Task PeekQueue(string fullyQualifiedNamespace, string queueName, bool fromTop = true, int messageCount = 10);
 }
 
 public class ServiceBusRepository : IServiceBusRepostitory
@@ -88,6 +89,21 @@ public class ServiceBusRepository : IServiceBusRepostitory
             Console.ResetColor();
             Console.Write($")");
             Console.WriteLine();
+        }
+    }
+
+    public async Task PeekQueue(string fullyQualifiedNamespace, string queueName, bool fromTop = true, int messageCount = 10)
+    {
+        var client = new ServiceBusClient(fullyQualifiedNamespace, new DefaultAzureCredential());
+        var receiver = client.CreateReceiver(queueName);
+        var messages = await receiver.PeekMessagesAsync(messageCount);
+
+        Console.WriteLine($"Got {messages.Count} messages");
+
+        foreach (var message in messages)
+        {
+            Console.WriteLine(message.Subject.ToString());
+            Console.WriteLine(message.Body.ToString());
         }
     }
 }

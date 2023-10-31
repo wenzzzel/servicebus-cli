@@ -22,6 +22,8 @@ public class ServiceBusCli : IServiceBusCli
 
     public async Task Run(string[] args)
     {
+        args = new string[] { "queue", "peek", "emea-grip-ip-async-sbus-dev.servicebus.windows.net", "ewenzel-awesome-dev-queue", "true", "1" };
+
         if (args.Length == 0)
             _help.Run();
         else

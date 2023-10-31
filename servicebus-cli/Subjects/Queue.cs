@@ -22,16 +22,19 @@ public class Queue : IQueue
     public async Task Run(string[] args)
     {
         Console.WriteLine(">queue");
-        if (args.Length is not 2 and not 3)
-        {
-            _helpService.Run();
-            return;
-        }
+        //if (args.Length is not 2 and not 3)
+        //{
+        //    _helpService.Run();
+        //    return;
+        //}
 
         switch (args[0])
         {
             case "list":
                 await List(args.Skip(1).ToList());
+                break;
+            case "peek":
+                await Peek(args.Skip(1).ToList());
                 break;
             default:
                 _helpService.Run();
@@ -64,5 +67,40 @@ public class Queue : IQueue
         Console.WriteLine($">list fullyQualifiedNamespace: {fullyQualifiedNamespace}, filter: {filter}");
 
         await _serviceBusRepostitory.ListQueues(fullyQualifiedNamespace, filter);
+    }
+
+    private async Task Peek(List<string> args)
+    {
+
+        string fullyQualifiedNamespace = "";
+        string queueName = "";
+        bool fromTop = true;
+        int messageCount = 10;
+
+        switch (args.Count)
+        {
+            case 2:
+                fullyQualifiedNamespace = args[0];
+                queueName = args[1];
+                break;
+            case 3:
+                fullyQualifiedNamespace = args[0];
+                queueName = args[1];
+                fromTop = true;
+                break;
+            case 4:
+                fullyQualifiedNamespace = args[0];
+                queueName = args[1];
+                fromTop = true;
+                messageCount = int.Parse(args[3]);
+                break;
+            default:
+                _helpService.Run();
+                return;
+        }
+
+        Console.WriteLine($">peek fullyQualifiedNamespace: {fullyQualifiedNamespace}, queueName: {queueName}, fromTop: {fromTop}, messageCount: {messageCount}");
+
+        await _serviceBusRepostitory.PeekQueue(fullyQualifiedNamespace, queueName, fromTop, messageCount);
     }
 }
