@@ -57,4 +57,19 @@ public class ServiceBusCliTests
         _deadletterMock.Verify(x => x.Run(expectedArgument), Times.Once());
         _helpMock.Verify(x => x.Run(), Times.Never());
     }
+
+    [Test]
+    public async Task Run_WhenCalledWithQueueArgument_QueueIsCalledOnce()
+    {
+        //Arrange
+        var args = new string[] { "queue" };
+        var expectedArgument = args.Skip(1).ToArray();
+
+        //Act
+        await cli.Run(args);
+
+        //Assert
+        _queueMock.Verify(x => x.Run(expectedArgument), Times.Once());
+        _helpMock.Verify(x => x.Run(), Times.Never());
+    }
 }
