@@ -12,6 +12,7 @@
 .vscode
 /Message.xml
 /Properties.xml
+*/lcov.info
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
