@@ -50,11 +50,12 @@ public class QueueTests
         _serviceBusRespository.Verify(x => x.ShowQueue(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
-    [Test]
-    public async Task Run_WhenCalledWithTooManyArguments_CallsHelpOnce()
+    [TestCase("list")]
+    [TestCase("show")]
+    public async Task Run_WhenCalledWithTooManyArguments_CallsHelpOnce(string action)
     {
         //Arrange
-        var myArgs = new string[] { "this", "is", "definitively", "too", "many", "arguments", "I", "would", "say" };
+        var myArgs = new string[] { action, "this", "is", "definitively", "too", "many", "arguments", "I", "would", "say" };
 
         //Act
         await _queue.Run(myArgs);
