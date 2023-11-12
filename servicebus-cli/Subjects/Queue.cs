@@ -22,7 +22,7 @@ public class Queue : IQueue
     public async Task Run(string[] args)
     {
         Console.WriteLine(">queue");
-        if (args.Length is not 2 and not 3)
+        if (args.Length < 1)
         {
             _helpService.Run();
             return;
@@ -62,7 +62,10 @@ public class Queue : IQueue
         }
 
         if (string.IsNullOrEmpty(fullyQualifiedNamespace))
+        {
             _helpService.Run();
+            return;
+        }
 
         Console.WriteLine($">list fullyQualifiedNamespace: {fullyQualifiedNamespace}, filter: {filter}");
 
@@ -89,7 +92,10 @@ public class Queue : IQueue
         }
 
         if (string.IsNullOrEmpty(fullyQualifiedNamespace))
+        {
             _helpService.Run();
+            return;
+        }
 
         Console.WriteLine($">show fullyQualifiedNamespace: {fullyQualifiedNamespace}, queue: {queueName}");
 

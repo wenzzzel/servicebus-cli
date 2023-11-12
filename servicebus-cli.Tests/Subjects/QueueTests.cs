@@ -29,19 +29,40 @@ public class QueueTests
         _help.Verify(x => x.Run(), Times.Once);
     }
 
-    [TestCase("This is an invalid action", "")]                 // both invalid
-    [TestCase("list", "")]                                      // action valid, namespace invalid
-    [TestCase("This is an invalid action", "valid namespace")]  // action invalid, namespace valid
-    public async Task Run_WhenCalledWithInvalidArguments_CallsHelpOnce(string action, string fullyQualifiedNamespace)
+    [TestCase("This is an invalid action", "", "valid filter")]     // action invalid, namespace invalid, filter valid
+    [TestCase("list", "", "valid filter")]                          // action valid,   namespace invalid, filter valid
+    [TestCase("show", "", "valid filter")]                          // action valid,   namespace invalid, filter valid
+    [TestCase("This is an invalid action", "valid namespace", "")]  // action invalid, namespace valid,   filter valid
+    public async Task Run_WhenCalledWithInvalidArguments_CallsHelpOnce(
+        string action, 
+        string fullyQualifiedNamespace, 
+        string filter)
     {
         //Arrange
-        var myArgs = new string[] { action, fullyQualifiedNamespace };
+        var myArgs = new string[] { action, fullyQualifiedNamespace, filter };
 
         //Act
         await _queue.Run(myArgs);
 
         //Assert
         _help.Verify(x => x.Run(), Times.Once);
+        _serviceBusRespository.Verify(x => x.ListQueues(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _serviceBusRespository.Verify(x => x.ShowQueue(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Run_WhenCalledWithTooManyArguments_CallsHelpOnce()
+    {
+        //Arrange
+        var myArgs = new string[] { "this", "is", "definitively", "too", "many", "arguments", "I", "would", "say" };
+
+        //Act
+        await _queue.Run(myArgs);
+
+        //Assert
+        _help.Verify(x => x.Run(), Times.Once);
+        _serviceBusRespository.Verify(x => x.ListQueues(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _serviceBusRespository.Verify(x => x.ShowQueue(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [TestCase("list")]
