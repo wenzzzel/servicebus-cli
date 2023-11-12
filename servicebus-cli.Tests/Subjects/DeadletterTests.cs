@@ -58,6 +58,30 @@ public class DeadletterTests
 
         //Assert
         _help.Verify(x => x.Run(), Times.Never());
-        Assert.Pass();
+        _serviceBusRespository.Verify(x => x.ResendDeadletterMessage(
+                                        It.IsAny<string>(), 
+                                        It.IsAny<string>(), 
+                                        It.IsAny<string>()
+                                    ), Times.Once());
+    }
+
+    [TestCase("notResend", "<FullyQualifiedNamespace>", "<EnitityPath>")]
+    [TestCase("notResend", "<FullyQualifiedNamespace>", "<EnitityPath>", "<UseSessions>")]
+    public async Task Run_WhenValidArgumentsAreProvided_GivenThatArgument0IsNotResend_CallsHelpOnce(string arg1, string arg2, string arg3, string arg4 = null)
+    {
+        //Arrange
+        var args = new string[] { arg1, arg2, arg3, arg4 };
+
+        //Act
+        await _deadletter.Run(args);
+
+        //Assert
+        _help.Verify(x => x.Run(), Times.Once());
+
+        _serviceBusRespository.Verify(x => x.ResendDeadletterMessage(
+                                                It.IsAny<string>(), 
+                                                It.IsAny<string>(), 
+                                                It.IsAny<string>()
+                                            ), Times.Never());
     }
 }

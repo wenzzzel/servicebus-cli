@@ -1,6 +1,4 @@
-﻿using Azure.Identity;
-using Azure.Messaging.ServiceBus;
-using servicebus_cli.Repositories;
+﻿using servicebus_cli.Repositories;
 
 namespace servicebus_cli.Subjects;
 
@@ -23,7 +21,7 @@ public class Deadletter : IDeadletter
     public async Task Run(string[] args)
     {
         Console.WriteLine(">deadletter");
-        if (args.Length is not 3 and not 4)
+        if (args.Length < 1)
         {
             _helpService.Run();
             return;
