@@ -1,18 +1,18 @@
-using servicebus_cli.Repositories;
+using servicebus_cli.Services;
 
 namespace servicebus_cli.Tests.Subjects;
 
 public class QueueTests
 {
     private Mock<IHelp> _help;
-    private Mock<IServiceBusRepostitory> _serviceBusRespository;
+    private Mock<IServiceBusService> _serviceBusRespository;
     private Queue _queue;
 
     [SetUp]
     public void Setup()
     {
         _help = new Mock<IHelp>();
-        _serviceBusRespository = new Mock<IServiceBusRepostitory>();
+        _serviceBusRespository = new Mock<IServiceBusService>();
         _queue = new Queue(_help.Object, _serviceBusRespository.Object);
     }
 

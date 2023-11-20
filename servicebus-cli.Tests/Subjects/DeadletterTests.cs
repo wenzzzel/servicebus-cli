@@ -1,18 +1,18 @@
-using servicebus_cli.Repositories;
+using servicebus_cli.Services;
 
 namespace servicebus_cli.Tests.Subjects;
 
 public class DeadletterTests
 {
     private Mock<IHelp> _help;
-    private Mock<IServiceBusRepostitory> _serviceBusRespository;
+    private Mock<IServiceBusService> _serviceBusRespository;
     private Deadletter _deadletter;
 
     [SetUp]
     public void Setup()
     {
         _help = new Mock<IHelp>();
-        _serviceBusRespository = new Mock<IServiceBusRepostitory>();
+        _serviceBusRespository = new Mock<IServiceBusService>();
         _deadletter = new Deadletter(_help.Object, _serviceBusRespository.Object);
     }
 

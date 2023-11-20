@@ -1,123 +1,24 @@
-﻿using Azure.Identity;
+using Azure.Identity;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace servicebus_cli.Repositories;
 
-public interface IServiceBusRepostitory
+public interface IServiceBusRepository
 {
-    Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, string useSession);
-    Task ListQueues(string fullyQualifiedNamespace, string filter = "");
-    Task ShowQueue(string fullyQualifiedNamespace, string queueName);
+    ServiceBusAdministrationClient GetServiceBusAdministrationClient(string fullyQualifiedNamespace);
+    ServiceBusClient GetServiceBusClient(string fullyQualifiedNamespace);
 }
 
-public class ServiceBusRepository : IServiceBusRepostitory
+public class ServiceBusRepository : IServiceBusRepository
 {
-    public async Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, string useSession)
+    public ServiceBusAdministrationClient GetServiceBusAdministrationClient(string fullyQualifiedNamespace)
     {
-        var serviceBusClient = new ServiceBusClient(fullyQualifiedNamespace, new DefaultAzureCredential());
-
-        var sender = serviceBusClient.CreateSender(entityPath);
-        var receiverOptions = new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter, ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete };
-        var receiver = serviceBusClient.CreateReceiver(entityPath, receiverOptions);
-
-        ServiceBusAdministrationClient adminClient = new ServiceBusAdministrationClient(fullyQualifiedNamespace, new DefaultAzureCredential());
-        QueueRuntimeProperties properties = await adminClient.GetQueueRuntimePropertiesAsync(entityPath);
-        var dlTotalMessageCount = properties.DeadLetterMessageCount;
-
-        Console.WriteLine("WARNING: Stopping the application before it's finished may result in data loss!");
-        var resentDlCount = 0;
-        IReadOnlyList<ServiceBusReceivedMessage> messages;
-        do
-        {
-            messages = await receiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
-            var tasks = new List<Task>();
-            
-            foreach (var message in messages)
-            {
-                var sendMessage = new ServiceBusMessage(message);
-
-                if (useSession == "Y")
-                    sendMessage.SessionId = message.SessionId;
-
-                tasks.Add(sender.SendMessageAsync(sendMessage));
-            }
-            await Task.WhenAll(tasks);
-            resentDlCount += messages.Count;
-            Console.WriteLine($"Sent {resentDlCount} / {dlTotalMessageCount}");
-        } while (messages.Count > 0 && resentDlCount < dlTotalMessageCount);
-
-        if (resentDlCount > dlTotalMessageCount)
-        {
-            Console.WriteLine($"INFO: The count of resent messages ({resentDlCount}) was greater then the initial deadletter count ({dlTotalMessageCount}). This may happen due to that deadletters are re-sent and end up on the deadletter queue again, before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent.");
-        }
+        return new ServiceBusAdministrationClient(fullyQualifiedNamespace, new DefaultAzureCredential());
     }
 
-    public async Task ListQueues(string fullyQualifiedNamespace, string filter = "")
+    public ServiceBusClient GetServiceBusClient(string fullyQualifiedNamespace)
     {
-        ServiceBusAdministrationClient adminClient = new ServiceBusAdministrationClient(fullyQualifiedNamespace, new DefaultAzureCredential());
-
-        var queues = adminClient.GetQueuesAsync();
-
-        await foreach (var queue in queues)
-        {
-            var regex = $".*{filter}.*";
-            Match match = Regex.Match(queue.Name, regex, RegexOptions.IgnoreCase);
-
-            if (!match.Success)
-                continue;
-
-            QueueRuntimeProperties properties = await adminClient.GetQueueRuntimePropertiesAsync(queue.Name);
-            var activeMessageCount = properties.ActiveMessageCount;
-            var deadLetterMessageCount = properties.DeadLetterMessageCount;
-            var scheduledMessageCount = properties.ScheduledMessageCount;
-
-            Console.OutputEncoding = Encoding.UTF8;
-            Console.Write($" 📮 {queue.Name} (");
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write($"{activeMessageCount}");
-            Console.ResetColor();
-            Console.Write($", ");
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write($"{deadLetterMessageCount}");
-            Console.ResetColor();
-            Console.Write($", ");
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.Write($"{scheduledMessageCount}");
-            Console.ResetColor();
-            Console.Write($")");
-            Console.WriteLine();
-        }
-    }
-
-    public async Task ShowQueue(string fullyQualifiedNamespace, string queueName)
-    {
-        ServiceBusAdministrationClient adminClient = new ServiceBusAdministrationClient(fullyQualifiedNamespace, new DefaultAzureCredential());
-
-        var res = await adminClient.GetQueueAsync(queueName);
-        var queue = res.Value;
-
-        QueueRuntimeProperties properties = await adminClient.GetQueueRuntimePropertiesAsync(queue.Name);
-        var activeMessageCount = properties.ActiveMessageCount;
-        var deadLetterMessageCount = properties.DeadLetterMessageCount;
-        var scheduledMessageCount = properties.ScheduledMessageCount;
-
-        Console.OutputEncoding = Encoding.UTF8;
-        Console.Write($" 📮 {queue.Name} (");
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.Write($"{activeMessageCount}");
-        Console.ResetColor();
-        Console.Write($", ");
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.Write($"{deadLetterMessageCount}");
-        Console.ResetColor();
-        Console.Write($", ");
-        Console.ForegroundColor = ConsoleColor.Blue;
-        Console.Write($"{scheduledMessageCount}");
-        Console.ResetColor();
-        Console.Write($")");
-        Console.WriteLine();
+        return new ServiceBusClient(fullyQualifiedNamespace, new DefaultAzureCredential());
     }
 }

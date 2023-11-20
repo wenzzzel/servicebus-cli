@@ -1,4 +1,4 @@
-﻿using servicebus_cli.Repositories;
+﻿using servicebus_cli.Services;
 
 namespace servicebus_cli.Subjects;
 
@@ -10,9 +10,9 @@ public interface IDeadletter
 public class Deadletter : IDeadletter
 {
     private readonly IHelp _helpService;
-    private readonly IServiceBusRepostitory _serviceBusRepostitory;
+    private readonly IServiceBusService _serviceBusRepostitory;
 
-    public Deadletter(IHelp helpService, IServiceBusRepostitory serviceBusRepostitory)
+    public Deadletter(IHelp helpService, IServiceBusService serviceBusRepostitory)
     {
         _helpService = helpService;
         _serviceBusRepostitory = serviceBusRepostitory;

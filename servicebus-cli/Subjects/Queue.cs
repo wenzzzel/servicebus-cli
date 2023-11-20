@@ -1,5 +1,5 @@
 ﻿
-using servicebus_cli.Repositories;
+using servicebus_cli.Services;
 
 namespace servicebus_cli.Subjects;
 
@@ -11,12 +11,12 @@ public interface IQueue
 public class Queue : IQueue
 {
     private readonly IHelp _helpService;
-    private readonly IServiceBusRepostitory _serviceBusRepostitory;
+    private readonly IServiceBusService _serviceBusService;
 
-    public Queue(IHelp helpService, IServiceBusRepostitory serviceBusRepostitory)
+    public Queue(IHelp helpService, IServiceBusService serviceBusRepostitory)
     {
         _helpService = helpService;
-        _serviceBusRepostitory = serviceBusRepostitory;
+        _serviceBusService = serviceBusRepostitory;
     }
 
     public async Task Run(string[] args)
@@ -69,7 +69,7 @@ public class Queue : IQueue
 
         Console.WriteLine($">list fullyQualifiedNamespace: {fullyQualifiedNamespace}, filter: {filter}");
 
-        await _serviceBusRepostitory.ListQueues(fullyQualifiedNamespace, filter);
+        await _serviceBusService.ListQueues(fullyQualifiedNamespace, filter);
     }
 
     private async Task Show(List<string> args)
@@ -99,6 +99,6 @@ public class Queue : IQueue
 
         Console.WriteLine($">show fullyQualifiedNamespace: {fullyQualifiedNamespace}, queue: {queueName}");
 
-        await _serviceBusRepostitory.ShowQueue(fullyQualifiedNamespace, queueName);
+        await _serviceBusService.ShowQueue(fullyQualifiedNamespace, queueName);
     }
 }
