@@ -8,13 +8,13 @@ public class ProgramTests
     }
 
     [Test]
-    public void Main_RunsWithoutCrashing()
+    public async Task Main_RunsWithoutCrashing()
     {
         //Arrange
         var args = new string[0];
         
         //Act
-        Program.Main(args);
+        await Program.Main(args);
         
         //Assert
         Assert.Pass();
