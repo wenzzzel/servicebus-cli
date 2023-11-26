@@ -46,7 +46,7 @@ public class ServiceBusServiceTests
     }
 
     [Test]
-    public async Task ResendDeadletterMessage_AllDependenciesAreInvokedCorrectly()
+    public async Task ResendDeadletterMessage_WhenHappyFlow_AllDependenciesAreInvokedCorrectly()
     {
         //Arrange
 
