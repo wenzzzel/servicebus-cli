@@ -15,6 +15,7 @@ public class ServiceBusServiceTests
     private Mock<ServiceBusSender> _serviceBusSender;
     private Mock<ServiceBusClient> _serviceBusClient;
     private Mock<ServiceBusAdministrationClient> _serviceBusAdministrationClient;
+    private int _deadLetterMessageCount = 100;
     private string _fullyQualifiedNamespace = "fullyQualifiedNamespace";
     private string _entityPath = "entityPath";
     private string _useSession = "Y";
@@ -45,7 +46,7 @@ public class ServiceBusServiceTests
     }
 
     [Test]
-    public async Task ResendDeadletterMessage_HappyFlow()
+    public async Task ResendDeadletterMessage_AllDependenciesAreInvokedCorrectly()
     {
         //Arrange
 
@@ -54,18 +55,12 @@ public class ServiceBusServiceTests
 
         //Assert
         _serviceBusRespository.Verify(x => x.GetServiceBusClient(It.IsAny<string>()), Times.Once);
-
         _serviceBusClient.Verify(x => x.CreateSender(It.IsAny<string>()), Times.Once);
         _serviceBusClient.Verify(x => x.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>()), Times.Once);
-
         _serviceBusRespository.Verify(x => x.GetServiceBusAdministrationClient(It.IsAny<string>()), Times.Once);
-
         _serviceBusAdministrationClient.Verify(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), (default)), Times.Once);
-
-        // _serviceBusReceiver.Verify(x => x.)
-        // _serviceBusSender.Verify(x => x.)
-
-        Assert.Pass();
+        _serviceBusReceiver.Verify(x => x.ReceiveMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), (default)), Times.AtLeastOnce);
+        _serviceBusSender.Verify(x => x.SendMessageAsync(It.IsAny<ServiceBusMessage>(), (default)), Times.AtLeast(_deadLetterMessageCount));
     }
 
     [Test]
@@ -111,7 +106,7 @@ public class ServiceBusServiceTests
 
     private Mock<Response<QueueRuntimeProperties>> SetupQueueRuntimePropertiesMock()
     {
-        var queueRuntimeProperties = ServiceBusModelFactory.QueueRuntimeProperties(_entityPath, deadLetterMessageCount: 100);
+        var queueRuntimeProperties = ServiceBusModelFactory.QueueRuntimeProperties(_entityPath, deadLetterMessageCount: _deadLetterMessageCount);
         var queueRuntimePropertiesMock = new Mock<Response<QueueRuntimeProperties>>();
         queueRuntimePropertiesMock.SetupGet(x => x.Value).Returns(queueRuntimeProperties);
 
