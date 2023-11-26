@@ -16,6 +16,7 @@ public class ServiceBusServiceTests
     private Mock<ServiceBusClient> _serviceBusClient;
     private Mock<ServiceBusAdministrationClient> _serviceBusAdministrationClient;
     private int _deadLetterMessageCount = 100;
+    private string _queueNameThatDoesNotExist = "queueNameThatDoesNotExist";
     private string _fullyQualifiedNamespace = "fullyQualifiedNamespace";
     private string _entityPath = "entityPath";
     private string _useSession = "Y";
@@ -38,6 +39,7 @@ public class ServiceBusServiceTests
 
         _serviceBusAdministrationClient = new Mock<ServiceBusAdministrationClient>();
         _serviceBusAdministrationClient.Setup(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), default)).Returns(Task.FromResult(queueRuntimeProperties.Object));
+        _serviceBusAdministrationClient.Setup(x => x.GetQueueRuntimePropertiesAsync(_queueNameThatDoesNotExist, default)).Returns(Task.FromResult<Response<QueueRuntimeProperties>>(null));
         _serviceBusAdministrationClient.Setup(x => x.GetQueuesAsync(It.IsAny<CancellationToken>())).Returns(queueProperties);
 
         _serviceBusRespository.Setup(x => x.GetServiceBusAdministrationClient(It.IsAny<string>())).Returns(_serviceBusAdministrationClient.Object);
@@ -102,6 +104,19 @@ public class ServiceBusServiceTests
         //Assert
         _serviceBusRespository.Verify(x => x.GetServiceBusAdministrationClient(It.IsAny<string>()), Times.Once);
         _serviceBusAdministrationClient.Verify(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), (default)), Times.Once);
+    }
+
+    [Test]
+    public async Task ShowQueue_WhenNoQueueWasFound_AllDependenciesAreInvokedCorrectly()
+    {
+        //Arrange
+
+        //Act
+        await _service.ShowQueue(_fullyQualifiedNamespace, _queueNameThatDoesNotExist);
+
+        //Assert
+        _serviceBusRespository.Verify(x => x.GetServiceBusAdministrationClient(It.IsAny<string>()), Times.Once);
+        _serviceBusAdministrationClient.Verify(x => x.GetQueueRuntimePropertiesAsync(_queueNameThatDoesNotExist, (default)), Times.Once);
     }
 
 
