@@ -78,6 +78,20 @@ public class ServiceBusServiceTests
     }
 
     [Test]
+    public async Task ListQueues_WhenCalledWithNonMatchingFilter_AllDependenciesAreInvokedCorrectly()
+    {
+        //Arrange
+
+        //Act
+        await _service.ListQueues(_fullyQualifiedNamespace, "nothingWillMatchThisFilter");
+
+        //Assert
+        _serviceBusRespository.Verify(x => x.GetServiceBusAdministrationClient(It.IsAny<string>()), Times.Once);
+        _serviceBusAdministrationClient.Verify(x => x.GetQueuesAsync((default)), Times.Once);
+        _serviceBusAdministrationClient.Verify(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), (default)), Times.Never);
+    }
+
+    [Test]
     public async Task ShowQueue_WhenHappyFlow_AllDependenciesAreInvokedCorrectly()
     {
         //Arrange
