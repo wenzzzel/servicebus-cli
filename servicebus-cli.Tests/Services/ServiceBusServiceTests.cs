@@ -17,35 +17,27 @@ public class ServiceBusServiceTests
 
     [SetUp]
     public void Setup()
-    {
-        _serviceBusRespository = new Mock<IServiceBusRepository>();
-        _service = new ServiceBusService(_serviceBusRespository.Object);
-
-        var receivedMessages = fixture.Create<IReadOnlyList<ServiceBusReceivedMessage>>();
-        var serviceBusReceiver = new Mock<ServiceBusReceiver>();
-        serviceBusReceiver.Setup(x => x.ReceiveMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult(receivedMessages));
-        var serviceBusSender = new Mock<ServiceBusSender>();
+    {       
+        var serviceBusReceiver = SetupServiceBusReceiverMock();
+        var serviceBusSender = SetupServiceBusSenderMock();
 
         var serviceBusClient = new Mock<ServiceBusClient>();
         serviceBusClient.Setup(x => x.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>())).Returns(serviceBusReceiver.Object);
         serviceBusClient.Setup(x => x.CreateSender(It.IsAny<string>())).Returns(serviceBusSender.Object);
+
+        _serviceBusRespository = new Mock<IServiceBusRepository>();
         _serviceBusRespository.Setup(x => x.GetServiceBusClient(It.IsAny<string>())).Returns(serviceBusClient.Object);
 
-        var queueRuntimeProperties = ServiceBusModelFactory.QueueRuntimeProperties(_entityPath, deadLetterMessageCount: 100);
-        var queueRuntimePropertiesMock = new Mock<Azure.Response<QueueRuntimeProperties>>();
-        queueRuntimePropertiesMock.SetupGet(x => x.Value).Returns(queueRuntimeProperties);
-
-        var page = Page<QueueProperties>.FromValues(new List<QueueProperties>
-        {
-            ServiceBusModelFactory.QueueProperties(_entityPath, new TimeSpan(1, 1, 1), 1, false, true, new TimeSpan(1, 1, 1), new TimeSpan(1, 1, 1), false, new TimeSpan(1, 1, 1), 1, false, new EntityStatus(), "", "", "", false)
-        }, continuationToken: null, new Mock<Response>().Object);
-        var pages = AsyncPageable<QueueProperties>.FromPages(new[] { page });
+        var queueRuntimeProperties = SetupQueueRuntimePropertiesMock();
+        var queueProperties = SetupQueueProperties();
 
         var serviceBusAdministrationClient = new Mock<ServiceBusAdministrationClient>();
-        serviceBusAdministrationClient.Setup(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), default)).Returns(Task.FromResult(queueRuntimePropertiesMock.Object));
-        serviceBusAdministrationClient.Setup(x => x.GetQueuesAsync(It.IsAny<CancellationToken>())).Returns(pages);
+        serviceBusAdministrationClient.Setup(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), default)).Returns(Task.FromResult(queueRuntimeProperties.Object));
+        serviceBusAdministrationClient.Setup(x => x.GetQueuesAsync(It.IsAny<CancellationToken>())).Returns(queueProperties);
 
         _serviceBusRespository.Setup(x => x.GetServiceBusAdministrationClient(It.IsAny<string>())).Returns(serviceBusAdministrationClient.Object);
+
+        _service = new ServiceBusService(_serviceBusRespository.Object);
     }
 
     [Test]
@@ -84,4 +76,43 @@ public class ServiceBusServiceTests
         Assert.Pass();
     }
 
+
+    private Mock<ServiceBusReceiver> SetupServiceBusReceiverMock()
+    {
+        var receivedMessages = fixture.Create<IReadOnlyList<ServiceBusReceivedMessage>>();
+        var serviceBusReceiver = new Mock<ServiceBusReceiver>();
+        serviceBusReceiver.Setup(x => x.
+            ReceiveMessagesAsync(
+                It.IsAny<int>(), 
+                It.IsAny<TimeSpan>(), 
+                It.IsAny<CancellationToken>())
+            ).Returns(Task.FromResult(receivedMessages));
+
+        return serviceBusReceiver;
+    }
+
+    private Mock<ServiceBusSender> SetupServiceBusSenderMock() => new Mock<ServiceBusSender>();
+
+    private Mock<Response<QueueRuntimeProperties>> SetupQueueRuntimePropertiesMock()
+    {
+        var queueRuntimeProperties = ServiceBusModelFactory.QueueRuntimeProperties(_entityPath, deadLetterMessageCount: 100);
+        var queueRuntimePropertiesMock = new Mock<Response<QueueRuntimeProperties>>();
+        queueRuntimePropertiesMock.SetupGet(x => x.Value).Returns(queueRuntimeProperties);
+
+        return queueRuntimePropertiesMock;
+    }
+
+    private AsyncPageable<QueueProperties> SetupQueueProperties()
+    {
+        var queueProperties = ServiceBusModelFactory.QueueProperties(_entityPath, new TimeSpan(1, 1, 1), 1, false, true, new TimeSpan(1, 1, 1), new TimeSpan(1, 1, 1), false, new TimeSpan(1, 1, 1), 1, false, new EntityStatus(), "", "", "", false);
+        
+        var page = Page<QueueProperties>.FromValues(
+            new List<QueueProperties>{queueProperties}, 
+            continuationToken: null, 
+            new Mock<Response>().Object);
+        
+        var pages = AsyncPageable<QueueProperties>.FromPages(new[] { page });
+
+        return pages;
+    }
 }
