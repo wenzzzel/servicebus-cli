@@ -64,7 +64,7 @@ public class ServiceBusServiceTests
     }
 
     [Test]
-    public async Task ListQueues_HappyFlow()
+    public async Task ListQueues_WhenHappyFlow_AllDependenciesAreInvokedCorrectly()
     {
         //Arrange
 
@@ -72,7 +72,9 @@ public class ServiceBusServiceTests
         await _service.ListQueues(_fullyQualifiedNamespace);
 
         //Assert
-        Assert.Pass();
+        _serviceBusRespository.Verify(x => x.GetServiceBusAdministrationClient(It.IsAny<string>()), Times.Once);
+        _serviceBusAdministrationClient.Verify(x => x.GetQueuesAsync((default)), Times.Once);
+        _serviceBusAdministrationClient.Verify(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), (default)), Times.Once);
     }
 
     [Test]
