@@ -11,6 +11,10 @@ public class ServiceBusServiceTests
     private Fixture fixture = new Fixture();
     private ServiceBusService _service;
     private Mock<IServiceBusRepository> _serviceBusRespository;
+    private Mock<ServiceBusReceiver> _serviceBusReceiver;
+    private Mock<ServiceBusSender> _serviceBusSender;
+    private Mock<ServiceBusClient> _serviceBusClient;
+    private Mock<ServiceBusAdministrationClient> _serviceBusAdministrationClient;
     private string _fullyQualifiedNamespace = "fullyQualifiedNamespace";
     private string _entityPath = "entityPath";
     private string _useSession = "Y";
@@ -18,24 +22,24 @@ public class ServiceBusServiceTests
     [SetUp]
     public void Setup()
     {       
-        var serviceBusReceiver = SetupServiceBusReceiverMock();
-        var serviceBusSender = SetupServiceBusSenderMock();
+        _serviceBusReceiver = SetupServiceBusReceiverMock();
+        _serviceBusSender = SetupServiceBusSenderMock();
 
-        var serviceBusClient = new Mock<ServiceBusClient>();
-        serviceBusClient.Setup(x => x.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>())).Returns(serviceBusReceiver.Object);
-        serviceBusClient.Setup(x => x.CreateSender(It.IsAny<string>())).Returns(serviceBusSender.Object);
+        _serviceBusClient = new Mock<ServiceBusClient>();
+        _serviceBusClient.Setup(x => x.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>())).Returns(_serviceBusReceiver.Object);
+        _serviceBusClient.Setup(x => x.CreateSender(It.IsAny<string>())).Returns(_serviceBusSender.Object);
 
         _serviceBusRespository = new Mock<IServiceBusRepository>();
-        _serviceBusRespository.Setup(x => x.GetServiceBusClient(It.IsAny<string>())).Returns(serviceBusClient.Object);
+        _serviceBusRespository.Setup(x => x.GetServiceBusClient(It.IsAny<string>())).Returns(_serviceBusClient.Object);
 
         var queueRuntimeProperties = SetupQueueRuntimePropertiesMock();
         var queueProperties = SetupQueueProperties();
 
-        var serviceBusAdministrationClient = new Mock<ServiceBusAdministrationClient>();
-        serviceBusAdministrationClient.Setup(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), default)).Returns(Task.FromResult(queueRuntimeProperties.Object));
-        serviceBusAdministrationClient.Setup(x => x.GetQueuesAsync(It.IsAny<CancellationToken>())).Returns(queueProperties);
+        _serviceBusAdministrationClient = new Mock<ServiceBusAdministrationClient>();
+        _serviceBusAdministrationClient.Setup(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), default)).Returns(Task.FromResult(queueRuntimeProperties.Object));
+        _serviceBusAdministrationClient.Setup(x => x.GetQueuesAsync(It.IsAny<CancellationToken>())).Returns(queueProperties);
 
-        _serviceBusRespository.Setup(x => x.GetServiceBusAdministrationClient(It.IsAny<string>())).Returns(serviceBusAdministrationClient.Object);
+        _serviceBusRespository.Setup(x => x.GetServiceBusAdministrationClient(It.IsAny<string>())).Returns(_serviceBusAdministrationClient.Object);
 
         _service = new ServiceBusService(_serviceBusRespository.Object);
     }
@@ -49,6 +53,18 @@ public class ServiceBusServiceTests
         await _service.ResendDeadletterMessage(_fullyQualifiedNamespace, _entityPath, _useSession);
 
         //Assert
+        _serviceBusRespository.Verify(x => x.GetServiceBusClient(It.IsAny<string>()), Times.Once);
+
+        _serviceBusClient.Verify(x => x.CreateSender(It.IsAny<string>()), Times.Once);
+        _serviceBusClient.Verify(x => x.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>()), Times.Once);
+
+        _serviceBusRespository.Verify(x => x.GetServiceBusAdministrationClient(It.IsAny<string>()), Times.Once);
+
+        _serviceBusAdministrationClient.Verify(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), (default)), Times.Once);
+
+        // _serviceBusReceiver.Verify(x => x.)
+        // _serviceBusSender.Verify(x => x.)
+
         Assert.Pass();
     }
 
