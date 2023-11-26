@@ -78,7 +78,7 @@ public class ServiceBusServiceTests
     }
 
     [Test]
-    public async Task ShowQueue_HappyFlow()
+    public async Task ShowQueue_WhenHappyFlow_AllDependenciesAreInvokedCorrectly()
     {
         //Arrange
 
@@ -86,7 +86,8 @@ public class ServiceBusServiceTests
         await _service.ShowQueue(_fullyQualifiedNamespace, _entityPath);
 
         //Assert
-        Assert.Pass();
+        _serviceBusRespository.Verify(x => x.GetServiceBusAdministrationClient(It.IsAny<string>()), Times.Once);
+        _serviceBusAdministrationClient.Verify(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), (default)), Times.Once);
     }
 
 
