@@ -66,7 +66,7 @@ public class ServiceBusServiceTests
     }
 
     [Test]
-    public async Task PurgeletterQueue_WhenHappyFlow_AllDependenciesAreInvokedCorrectly()
+    public async Task PurgeDeadletterQueue_WhenHappyFlow_AllDependenciesAreInvokedCorrectly()
     {
         //Arrange
 
