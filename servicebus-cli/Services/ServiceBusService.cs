@@ -9,6 +9,7 @@ namespace servicebus_cli.Services;
 public interface IServiceBusService
 {
     Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, string useSession);
+    Task PurgeDeadletterQueue(string fullyQualifiedNamespace, string entityPath);
     Task ListQueues(string fullyQualifiedNamespace, string filter = "");
     Task ShowQueue(string fullyQualifiedNamespace, string queueName);
 }
@@ -63,6 +64,48 @@ public class ServiceBusService : IServiceBusService
                 deadletter count ({dlTotalMessageCount}). This may happen due to that deadletters are re-sent and end up on 
                 the deadletter queue again, before the resend job was able to finish. It is an indicator that there are bad 
                 messages on your deadletter queue that should be handled and/or removed instead of resent.");
+        }
+    }
+
+    public async Task PurgeDeadletterQueue(string fullyQualifiedNamespace, string queueName)
+    {
+        var serviceBusClient = _serviceBusRepository.GetServiceBusClient(fullyQualifiedNamespace);
+        
+        var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
+        var properties = await adminClient.GetQueueRuntimePropertiesAsync(queueName);
+
+        if(properties is null)
+        {
+            Console.Write($" ❌ No queue found with name {queueName}");
+            return;
+        }
+
+        var deadLetterMessageCount = properties.Value.DeadLetterMessageCount;
+
+        if (deadLetterMessageCount == 0)
+        {
+            Console.Write($" ❌ No deadletter messages found in queue {queueName}");
+            return;
+        }
+
+        var receiverOptions = new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter, ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete };
+        var receiver = serviceBusClient.CreateReceiver(queueName, receiverOptions);
+
+        var deleteDlCount = 0;
+        IReadOnlyList<ServiceBusReceivedMessage> messages;
+        do
+        {
+            messages = await receiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
+
+            deleteDlCount += messages.Count;
+            Console.WriteLine($"Deleted {deleteDlCount} / {deadLetterMessageCount}");
+        } while (messages.Count > 0 && deleteDlCount < deadLetterMessageCount);
+
+        if (deleteDlCount > deadLetterMessageCount)
+        {
+            Console.WriteLine(@$"INFO: The count of deleted messages ({deleteDlCount}) was greater then the initial 
+                deadletter count ({deadLetterMessageCount}). This may happen due to that deadletters are appearing on 
+                the deadletter queue while deleting. It might be good idea to investigate why this is happening.");
         }
     }
 

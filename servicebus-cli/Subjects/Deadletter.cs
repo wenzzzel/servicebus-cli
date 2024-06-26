@@ -32,6 +32,9 @@ public class Deadletter : IDeadletter
             case "resend":
                 await Resend(args.Skip(1).ToList());
                 break;
+            case "purge":
+                await Purge(args.Skip(1).ToList());
+                break;
             default:
                 _helpService.Run();
                 break;
@@ -66,5 +69,26 @@ public class Deadletter : IDeadletter
         Console.WriteLine($">resend fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}, useSessions: {useSession}");
         
         await _serviceBusRepostitory.ResendDeadletterMessage(fullyQualifiedNamespace, entityPath, useSession);
+    }
+
+    private async Task Purge(List<string> args)
+    {
+        var fullyQualifiedNamespace = "";
+        var entityPath = "";
+
+        switch (args.Count)
+        {
+            case 2:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                break;
+            default:
+                _helpService.Run();
+                return;
+        }
+
+        Console.WriteLine($">purge fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}");
+        
+        await _serviceBusRepostitory.PurgeDeadletterQueue(fullyQualifiedNamespace, entityPath);
     }
 }
