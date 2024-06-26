@@ -66,6 +66,22 @@ public class ServiceBusServiceTests
     }
 
     [Test]
+    public async Task PurgeletterQueue_WhenHappyFlow_AllDependenciesAreInvokedCorrectly()
+    {
+        //Arrange
+
+        //Act
+        await _service.PurgeDeadletterQueue(_fullyQualifiedNamespace, _entityPath);
+
+        //Assert
+        _serviceBusRespository.Verify(x => x.GetServiceBusClient(It.IsAny<string>()), Times.Once);
+        _serviceBusRespository.Verify(x => x.GetServiceBusAdministrationClient(It.IsAny<string>()), Times.Once);
+        _serviceBusAdministrationClient.Verify(x => x.GetQueueRuntimePropertiesAsync(It.IsAny<string>(), (default)), Times.Once);
+        _serviceBusClient.Verify(x => x.CreateReceiver(It.IsAny<string>(), It.IsAny<ServiceBusReceiverOptions>()), Times.Once);
+        _serviceBusReceiver.Verify(x => x.ReceiveMessagesAsync(It.IsAny<int>(), It.IsAny<TimeSpan>(), (default)), Times.AtLeastOnce);
+    }
+
+    [Test]
     public async Task ListQueues_WhenHappyFlow_AllDependenciesAreInvokedCorrectly()
     {
         //Arrange
