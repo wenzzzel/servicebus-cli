@@ -18,6 +18,9 @@ public class Help : IHelp
                           "        - <FullyQualifiedNamespace> \n" +
                           "        - <EnitityPath> \n" + 
                           "        - <UseSessions> (Y/N) \n" +
+                          "    - purge \n" +
+                          "        - <FullyQualifiedNamespace> \n" +
+                          "        - <EnitityPath> \n" +
                           " - queue \n" +
                           "    - list \n" +
                           "        - <FullyQualifiedNamespace> \n" +
