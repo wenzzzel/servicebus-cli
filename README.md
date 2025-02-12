@@ -22,7 +22,7 @@ Servicebus Cli is a command line interface for working with Azure Service Bus.
 🚦 Usage
 </h2>
 <p>
-The application syntax is split into <code>subjects</code> and <code>actions</code>. The first parameter is always the <code>subject</code> and second parameter is the <code>action</code>. All parameters after that are <code>parameters</code> passed to the action.
+The application syntax is split into <code>subjects</code> and <code>actions</code>. The first parameter is the <code>subject</code> and second parameter is the <code>action</code>. All parameters after that are <code>parameters</code> passed to the action.
 </p>
 
 <p>
@@ -59,12 +59,12 @@ Example: servicebus-cli deadletter resend <FullyQualifiedNamespace> <EnitityPath
 <h2>
 📌 Examples
 </h2>
-<p>List all service bus queues on namespace <code>my-namespace.servicebus</code></p>
+<p>List all service bus queues on namespace <code>my-namespace</code></p>
 
 ```
 servicebus-cli queue list "my-namespace.servicebus.windows.net" ""
 ```
-<p>List all service bus queues on namespace <code>my-namespace.servicebus</code> with a name containing <code>my-queue</code></p>
+<p>List all service bus queues on namespace <code>my-namespace</code> with a name containing <code>my-queue</code></p>
 
 ```
 servicebus-cli queue list "my-namespace.servicebus.windows.net" "my-queue"
