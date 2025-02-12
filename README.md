@@ -8,8 +8,8 @@ servicebus-cli
 	<a href="https://github.com/wenzzzel/servicebus-cli/contributors"><img src="https://img.shields.io/github/contributors/wenzzzel/servicebus-cli?colorA=363a4f&colorB=a6da95&style=for-the-badge"></a>
 </p>
 <p align="center">
-	<img src="assets/preview.png"/>
-<i><small><span style="color:green">Green</span> numbers = Messges, <span style="color:red">Red</span> numbers = Dead letters, <span style="color:blue">Blue</span> numbers = Scheduled messages</small></i>
+	<img src="Assets/preview.png"/>
+<i><small><span style="color:green">Green</span> numbers = Messages, <span style="color:red">Red</span> numbers = Dead letters, <span style="color:blue">Blue</span> numbers = Scheduled messages</small></i>
 </p>
 <h2>
 📃 About
