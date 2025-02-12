@@ -22,7 +22,7 @@ Servicebus Cli is a command line interface for working with Azure Service Bus.
 🚦 Usage
 </h2>
 <p>
-The application is split into <code>subjects</code> and <code>actions</code>. The first parameter is always the <code>subject</code> and second parameter is the <code>action</code>. All parameters after that are <code>parameters</code> passed to the action.
+The application syntax is split into <code>subjects</code> and <code>actions</code>. The first parameter is always the <code>subject</code> and second parameter is the <code>action</code>. All parameters after that are <code>parameters</code> passed to the action.
 </p>
 
 <p>
