@@ -17,7 +17,7 @@ public class Help : IHelp
                           "    - resend \n" +
                           "        - <FullyQualifiedNamespace> \n" +
                           "        - <EnitityPath> \n" + 
-                          "        - <UseSessions> (Y/N) \n" +
+                          "        - <UseSessions> (y/n) \n" +
                           "    - purge \n" +
                           "        - <FullyQualifiedNamespace> \n" +
                           "        - <EnitityPath> \n" +
