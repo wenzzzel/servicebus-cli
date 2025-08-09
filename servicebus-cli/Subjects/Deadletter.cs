@@ -1,4 +1,5 @@
 ﻿using servicebus_cli.Services;
+using Spectre.Console;
 
 namespace servicebus_cli.Subjects;
 
@@ -20,14 +21,27 @@ public class Deadletter : IDeadletter
 
     public async Task Run(string[] args)
     {
-        Console.WriteLine(">deadletter");
+        string selectedAction = "";
         if (args.Length < 1)
         {
-            _helpService.Run();
-            return;
+            selectedAction = await AnsiConsole.PromptAsync(
+                new SelectionPrompt<string>()
+                    .Title("Action: ")
+                    .PageSize(10)
+                    .AddChoices(
+                        "resend",
+                        "purge"
+                    )
+            );
+        }
+        else
+        {
+            selectedAction = args[0];
         }
 
-        switch (args[0])
+        AnsiConsole.MarkupLine($"[grey]Selected action: {selectedAction}[/]");
+
+        switch (selectedAction)
         {
             case "resend":
                 await Resend(args.Skip(1).ToList());
@@ -45,7 +59,7 @@ public class Deadletter : IDeadletter
     {
         var fullyQualifiedNamespace = "";
         var entityPath = "";
-        var useSession = "";
+        bool useSession = false;
 
         switch (args.Count)
         {
@@ -56,18 +70,28 @@ public class Deadletter : IDeadletter
             case 3:
                 fullyQualifiedNamespace = args[0];
                 entityPath = args[1];
-                useSession = args[2];
+                useSession = args[2].ToUpper() == "Y";
                 break;
             default:
-                _helpService.Run();
-                return;
+                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
+                );
+                entityPath = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter a [green]entity path[/]:")
+                );
+                useSession = await AnsiConsole.ConfirmAsync("Use session?");
+                break;
         }
 
-        if (useSession != "Y")
-            useSession = "N";
+        var confirmed = await AnsiConsole.ConfirmAsync($"[red]WARNING:[/] This action will resend all deadletter messages. Stopping the application before it's finished may result in data loss! Do you want to continue?");
 
-        Console.WriteLine($">resend fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}, useSessions: {useSession}");
-        
+        if (!confirmed)
+        {
+            AnsiConsole.MarkupLine("[red]Operation cancelled.[/]");
+            return;
+        }
+
+        AnsiConsole.MarkupLine($"[grey]Resending deadletter messages from {entityPath} on {fullyQualifiedNamespace} with sessions: {useSession}[/]");
         await _serviceBusRepostitory.ResendDeadletterMessage(fullyQualifiedNamespace, entityPath, useSession);
     }
 
@@ -83,12 +107,24 @@ public class Deadletter : IDeadletter
                 entityPath = args[1];
                 break;
             default:
-                _helpService.Run();
-                return;
+                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
+                );
+                entityPath = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter a [green]entity path[/]:")
+                );
+                break;
         }
 
-        Console.WriteLine($">purge fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}");
-        
+        var confirmed = await AnsiConsole.ConfirmAsync($"[red]WARNING:[/] This action will purge all deadletter messages. Do you want to continue?");
+
+        if (!confirmed)
+        {
+            AnsiConsole.MarkupLine("[red]Operation cancelled.[/]");
+            return;
+        }
+
+        AnsiConsole.MarkupLine($"[grey]Purging deadletter messages from {entityPath} on {fullyQualifiedNamespace}...[/]");
         await _serviceBusRepostitory.PurgeDeadletterQueue(fullyQualifiedNamespace, entityPath);
     }
 }

@@ -1,6 +1,7 @@
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using servicebus_cli.Repositories;
+using Spectre.Console;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -8,7 +9,7 @@ namespace servicebus_cli.Services;
 
 public interface IServiceBusService
 {
-    Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, string useSession);
+    Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, bool useSession);
     Task PurgeDeadletterQueue(string fullyQualifiedNamespace, string entityPath);
     Task ListQueues(string fullyQualifiedNamespace, string filter = "");
     Task ShowQueue(string fullyQualifiedNamespace, string queueName);
@@ -24,7 +25,7 @@ public class ServiceBusService : IServiceBusService
         _serviceBusRepository = serviceBusRepostitory;
     }
 
-    public async Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, string useSession)
+    public async Task ResendDeadletterMessage(string fullyQualifiedNamespace, string entityPath, bool useSession)
     {
         var serviceBusClient = _serviceBusRepository.GetServiceBusClient(fullyQualifiedNamespace);
 
@@ -48,7 +49,7 @@ public class ServiceBusService : IServiceBusService
             {
                 var sendMessage = new ServiceBusMessage(message);
 
-                if (useSession == "Y")
+                if (useSession)
                     sendMessage.SessionId = message.SessionId;
 
                 tasks.Add(sender.SendMessageAsync(sendMessage));
