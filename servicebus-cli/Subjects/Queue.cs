@@ -1,4 +1,4 @@
-﻿
+﻿using System.Text;
 using servicebus_cli.Services;
 
 namespace servicebus_cli.Subjects;
@@ -57,21 +57,44 @@ public class Queue : IQueue
                 filter = args[1];
                 break;
             default:
-                _helpService.Run();
-                return;
+                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
+                );
+                filter = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter a [green]filter[/] (optional):")
+                        .AllowEmpty()
+                );
+                break;
         }
 
-        if (string.IsNullOrEmpty(fullyQualifiedNamespace))
+        var queues = await _serviceBusService.GetQueues(fullyQualifiedNamespace, filter);
+
+        AnsiConsole.MarkupLine($"[grey]Listing queues on {fullyQualifiedNamespace}...[/]");
+        
+        var table = new Table();
+        table.AddColumn("📮 [bold]Queue Name[/]");
+        table.AddColumn("[green]Active[/]");
+        table.AddColumn("[red]Dead Letter[/]");
+        table.AddColumn("[blue]Scheduled[/]");
+
+        foreach (var queue in queues)
         {
-            _helpService.Run();
-            return;
+            var activeMessageCount = queue.QueueRuntimeProperties.ActiveMessageCount;
+            var deadLetterMessageCount = queue.QueueRuntimeProperties.DeadLetterMessageCount;
+            var scheduledMessageCount = queue.QueueRuntimeProperties.ScheduledMessageCount;
+
+            table.AddRow(
+                queue.QueueProperties.Name,
+                $"[green]{activeMessageCount}[/]",
+                $"[red]{deadLetterMessageCount}[/]",
+                $"[blue]{scheduledMessageCount}[/]"
+            );
         }
 
-        Console.WriteLine($">list fullyQualifiedNamespace: {fullyQualifiedNamespace}, filter: {filter}");
-
-        await _serviceBusService.ListQueues(fullyQualifiedNamespace, filter);
+        AnsiConsole.Write(table);
     }
 
+// TODO: Remove this Action if it's not needed
     private async Task Show(List<string> args)
     {
         var fullyQualifiedNamespace = "";

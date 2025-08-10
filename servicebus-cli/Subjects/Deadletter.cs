@@ -59,8 +59,29 @@ public class Deadletter : IDeadletter
                 useSession = args[2];
                 break;
             default:
-                _helpService.Run();
-                return;
+                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
+                );
+
+                var queues = await _serviceBusRepostitory.GetQueues(fullyQualifiedNamespace);
+                var selectedQueue = await AnsiConsole.PromptAsync(
+                    new SelectionPrompt<string>()
+                        .Title("Select a [green]queue[/]:")
+                        .PageSize(30)
+                        .EnableSearch()
+                        .AddChoices(queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList())
+                );
+                entityPath = selectedQueue.Split(' ')[0];
+                useSession = await AnsiConsole.ConfirmAsync("Use session?");
+                break;
+        }
+
+        var confirmed = await AnsiConsole.ConfirmAsync($"[red]WARNING:[/] This action will resend all deadletter messages. Stopping the application before it's finished may result in data loss! Do you want to continue?");
+
+        if (!confirmed)
+        {
+            AnsiConsole.MarkupLine("[red]Operation cancelled.[/]");
+            return;
         }
 
         if (useSession != "Y")
@@ -83,8 +104,27 @@ public class Deadletter : IDeadletter
                 entityPath = args[1];
                 break;
             default:
-                _helpService.Run();
-                return;
+                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
+                );
+                var queues = await _serviceBusRepostitory.GetQueues(fullyQualifiedNamespace);
+                var selectedQueue = await AnsiConsole.PromptAsync(
+                    new SelectionPrompt<string>()
+                        .Title("Select a [green]queue[/]:")
+                        .PageSize(30)
+                        .EnableSearch()
+                        .AddChoices(queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList())
+                );
+                entityPath = selectedQueue.Split(' ')[0];
+                break;
+        }
+
+        var confirmed = await AnsiConsole.ConfirmAsync($"[red]WARNING:[/] This action will purge all deadletter messages. Do you want to continue?");
+
+        if (!confirmed)
+        {
+            AnsiConsole.MarkupLine("[red]Operation cancelled.[/]");
+            return;
         }
 
         Console.WriteLine($">purge fullyQualifiedNamespace: {fullyQualifiedNamespace}, entityPath: {entityPath}");
