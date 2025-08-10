@@ -79,14 +79,6 @@ public class Queue : IQueue
                         .AllowEmpty()
                 );
                 break;
-                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
-                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
-                );
-                filter = await AnsiConsole.PromptAsync(
-                    new TextPrompt<string>("Enter a [green]filter[/] (optional):")
-                        .AllowEmpty()
-                );
-                break;
         }
 
         var queues = await _serviceBusService.GetQueues(fullyQualifiedNamespace, filter);
