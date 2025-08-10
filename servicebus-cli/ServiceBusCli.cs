@@ -1,4 +1,5 @@
 ﻿using servicebus_cli.Subjects;
+using Spectre.Console;
 
 namespace servicebus_cli;
 
@@ -22,20 +23,39 @@ public class ServiceBusCli : IServiceBusCli
 
     public async Task Run(string[] args)
     {
+        string selectedSubject;
+
         if (args.Length == 0)
-            _help.Run();
+        {
+            selectedSubject = await AnsiConsole.PromptAsync(
+                new SelectionPrompt<string>()
+                    .Title("Subject: ")
+                    .PageSize(10)
+                    .AddChoices(
+                        "deadletter",
+                        "queue",
+                        "help"
+                    )
+            );
+        }
         else
-            switch (args[0])
-            {
-                case "deadletter":
-                    await _deadletter.Run(args.Skip(1).ToArray());
-                    break;
-                case "queue":
-                    await queue.Run(args.Skip(1).ToArray());
-                    break;
-                default:
-                    _help.Run();
-                    break;
-            }
+        {
+            selectedSubject = args[0];
+        }
+
+        AnsiConsole.MarkupLine($"[grey]Selected subject: {selectedSubject}[/]");
+
+        switch (selectedSubject)
+        {
+            case "deadletter":
+                await _deadletter.Run(args.Skip(1).ToArray());
+                break;
+            case "queue":
+                await queue.Run(args.Skip(1).ToArray());
+                break;
+            default:
+                _help.Run();
+                break;
+        }
     }
 }

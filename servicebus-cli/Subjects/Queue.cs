@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using servicebus_cli.Services;
+using Spectre.Console;
 
 namespace servicebus_cli.Subjects;
 
@@ -21,14 +22,27 @@ public class Queue : IQueue
 
     public async Task Run(string[] args)
     {
-        Console.WriteLine(">queue");
+        string selectedAction;
         if (args.Length < 1)
         {
-            _helpService.Run();
-            return;
+            selectedAction = await AnsiConsole.PromptAsync(
+                new SelectionPrompt<string>()
+                    .Title("Action: ")
+                    .PageSize(10)
+                    .AddChoices(
+                        "list",
+                        "show"
+                    )
+            );
+        }
+        else
+        {
+            selectedAction = args[0];
         }
 
-        switch (args[0])
+        AnsiConsole.MarkupLine($"[grey]Selected action: {selectedAction}[/]");
+
+        switch (selectedAction)
         {
             case "list":
                 await List(args.Skip(1).ToList());
@@ -57,6 +71,14 @@ public class Queue : IQueue
                 filter = args[1];
                 break;
             default:
+                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
+                );
+                filter = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter a [green]filter[/] (optional):")
+                        .AllowEmpty()
+                );
+                break;
                 fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
                     new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
                 );
@@ -110,18 +132,16 @@ public class Queue : IQueue
                 queueName = args[1];
                 break;
             default:
-                _helpService.Run();
-                return;
+                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
+                );
+                queueName = await AnsiConsole.PromptAsync(
+                    new TextPrompt<string>("Enter a [green]queue name[/]:")
+                );
+                break;
         }
 
-        if (string.IsNullOrEmpty(fullyQualifiedNamespace))
-        {
-            _helpService.Run();
-            return;
-        }
-
-        Console.WriteLine($">show fullyQualifiedNamespace: {fullyQualifiedNamespace}, queue: {queueName}");
-
+        AnsiConsole.MarkupLine($"[grey]Showing queue {queueName} on {fullyQualifiedNamespace}...[/]");
         await _serviceBusService.ShowQueue(fullyQualifiedNamespace, queueName);
     }
 }
