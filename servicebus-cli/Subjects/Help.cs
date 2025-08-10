@@ -1,4 +1,5 @@
-﻿
+﻿using Spectre.Console;
+
 namespace servicebus_cli.Subjects;
 
 public interface IHelp
@@ -10,24 +11,56 @@ public class Help : IHelp
 {
     public void Run()
     {
-        Console.WriteLine("Syntax: servicebus-cli <subject> <action> <parameter1> <parameterX> ... \n" +
-                          "\n" +
-                          "The following subjects and actions are available: \n" +
-                          " - deadletter \n" +
-                          "    - resend \n" +
-                          "        - <FullyQualifiedNamespace> \n" +
-                          "        - <EnitityPath> \n" + 
-                          "        - <UseSessions> (y/n) \n" +
-                          "    - purge \n" +
-                          "        - <FullyQualifiedNamespace> \n" +
-                          "        - <EnitityPath> \n" +
-                          " - queue \n" +
-                          "    - list \n" +
-                          "        - <FullyQualifiedNamespace> \n" +
-                          "        - <Filter> \n" +
-                          "    - show \n" +
-                          "        - <FullyQualifiedNamespace> \n" +
-                          "        - <QueueName> \n" +
-                          "Example: servicebus-cli deadletter resend <FullyQualifiedNamespace> <EnitityPath>");
+        // Display the title with styling
+        AnsiConsole.Write(
+            new FigletText("ServiceBus CLI")
+                .Centered()
+                .Color(Color.Blue));
+
+        AnsiConsole.WriteLine();
+        
+        // Display syntax information
+        var syntaxPanel = new Panel("[bold]Syntax:[/] [cyan]servicebus-cli[/] [yellow]<subject>[/] [green]<action>[/] [dim]<parameter1>[/] [dim]<parameterX>[/] ...")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Grey)
+            .Header("[bold blue]Command Syntax[/]");
+        
+        AnsiConsole.Write(syntaxPanel);
+        AnsiConsole.WriteLine();
+
+        // Create the command tree
+        var tree = new Tree("[bold blue]Available Commands[/]")
+            .Style(Style.Parse("blue"));
+
+        // Deadletter branch
+        var deadletterNode = tree.AddNode("[bold yellow]deadletter[/] - Dead letter queue operations");
+        
+        var resendNode = deadletterNode.AddNode("[green]resend[/] - Resend messages from dead letter queue");
+        resendNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
+        resendNode.AddNode("[dim]<EntityPath>[/] - Queue or topic name");
+        resendNode.AddNode("[dim]<UseSessions>[/] - Use sessions (y/n)");
+        
+        var purgeNode = deadletterNode.AddNode("[green]purge[/] - Remove all messages from dead letter queue");
+        purgeNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
+        purgeNode.AddNode("[dim]<EntityPath>[/] - Queue or topic name");
+
+        // Queue branch
+        var queueNode = tree.AddNode("[bold yellow]queue[/] - Queue management operations");
+        
+        var listNode = queueNode.AddNode("[green]list[/] - List queues in namespace");
+        listNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
+        listNode.AddNode("[dim]<Filter>[/] - Optional filter pattern");
+
+        // Render the tree
+        AnsiConsole.Write(tree);
+        AnsiConsole.WriteLine();
+
+        // Add example section
+        var examplePanel = new Panel("[bold]Example:[/]\n[cyan]servicebus-cli[/] [yellow]deadletter[/] [green]resend[/] [dim]myservicebus.servicebus.windows.net myqueue[/]")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Green)
+            .Header("[bold green]Usage Example[/]");
+        
+        AnsiConsole.Write(examplePanel);
     }
 }

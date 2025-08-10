@@ -1,4 +1,5 @@
-﻿using servicebus_cli.Services;
+﻿using Azure.Messaging.ServiceBus;
+using servicebus_cli.Services;
 using Spectre.Console;
 
 namespace servicebus_cli.Subjects;
@@ -90,7 +91,7 @@ public class Deadletter : IDeadletter
                 break;
         }
 
-        var confirmed = await AnsiConsole.ConfirmAsync($"[red]WARNING:[/] This action will resend all deadletter messages. Stopping the application before it's finished may result in data loss! Do you want to continue?");
+        var confirmed = await AnsiConsole.ConfirmAsync(@$"[red]WARNING:[/] This action will resend all deadletter messages. Stopping the application before it's finished may result in data loss! Do you want to continue?");
 
         if (!confirmed)
         {
@@ -98,8 +99,45 @@ public class Deadletter : IDeadletter
             return;
         }
 
-        AnsiConsole.MarkupLine($"[grey]Resending deadletter messages from {entityPath} on {fullyQualifiedNamespace} with sessions: {useSession}[/]");
-        await _serviceBusRepostitory.ResendDeadletterMessage(fullyQualifiedNamespace, entityPath, useSession);
+        var deadletterCount = await _serviceBusRepostitory.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
+        if (deadletterCount is null or 0)
+        {
+            AnsiConsole.MarkupLine($"[red]ERROR:[/] No deadletter messages found in queue {entityPath}");
+            return;
+        }
+
+        var queue = _serviceBusRepostitory.ConnectToQueue(fullyQualifiedNamespace, entityPath);
+        var resentDlCount = 0;
+        IReadOnlyList<ServiceBusReceivedMessage> messages;
+        await AnsiConsole.Status().StartAsync($"Resending messages... 0 / {deadletterCount}", async ctx =>
+        {
+            do
+            {
+                messages = await queue.DeadletterReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
+                var tasks = new List<Task>();
+
+                foreach (var message in messages)
+                {
+                    var sendMessage = new ServiceBusMessage(message);
+
+                    if (useSession)
+                        sendMessage.SessionId = message.SessionId;
+
+                    tasks.Add(queue.Sender.SendMessageAsync(sendMessage));
+                }
+                await Task.WhenAll(tasks);
+                resentDlCount += messages.Count;
+                ctx.Status($"Resending messages... {resentDlCount} / {deadletterCount}");
+            } while (messages.Count > 0 && resentDlCount < deadletterCount);
+        });
+
+        if (resentDlCount > deadletterCount)
+            AnsiConsole.MarkupLine(@$"[red]WARNING:[/] The count of resent messages ({resentDlCount}) was greater than the 
+            initial deadletter count ({deadletterCount}). This may happen due to deadletters being re-sent and 
+            ending up on the deadletter queue again before the resend job was able to finish. It is an indicator that 
+            there are bad messages on your deadletter queue that should be handled and/or removed instead of resent.");
+        else
+            AnsiConsole.MarkupLine(@$"[green]Success![/] [grey]Resent {resentDlCount} messages from deadletter queue {entityPath}[/]");
     }
 
     private async Task Purge(List<string> args)
@@ -137,7 +175,35 @@ public class Deadletter : IDeadletter
             return;
         }
 
-        AnsiConsole.MarkupLine($"[grey]Purging deadletter messages from {entityPath} on {fullyQualifiedNamespace}...[/]");
-        await _serviceBusRepostitory.PurgeDeadletterQueue(fullyQualifiedNamespace, entityPath);
+        var deadletterCountTotal = await _serviceBusRepostitory.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
+        if (deadletterCountTotal is null or 0)
+        {
+            AnsiConsole.MarkupLine($"[red]ERROR:[/] No deadletter messages found in queue {entityPath}");
+            return;
+        }
+
+        var queue = _serviceBusRepostitory.ConnectToQueue(fullyQualifiedNamespace, entityPath);
+
+        var deletedDeadletterCount = 0;
+        IReadOnlyList<ServiceBusReceivedMessage> messages;
+        await AnsiConsole.Status().StartAsync($"Deleting messages... 0 / {deadletterCountTotal}", async ctx =>
+        {
+            do
+            {
+                messages = await queue.DeadletterReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30)); //Simply receiving messages deletes them as well
+
+                deletedDeadletterCount += messages.Count;
+                ctx.Status($"Deleting messages... {deletedDeadletterCount} / {deadletterCountTotal}");
+
+            } while (messages.Count > 0 && deletedDeadletterCount < deadletterCountTotal);
+        });
+
+        if (deletedDeadletterCount > deadletterCountTotal)
+            AnsiConsole.MarkupLine(@$"[red]WARNING:[/] The count of deleted messages ({deletedDeadletterCount}) was greater 
+            than the initial deadletter count ({deadletterCountTotal}). This may happen due to that deadletters are 
+            appearing on the deadletter queue while deleting. It might be good idea to investigate why this is happening.");
+        else
+            AnsiConsole.MarkupLine(@$"[green]Success![/] [grey]Deleted {deletedDeadletterCount} messages from deadletter 
+            queue {entityPath}[/]");
     }
 }

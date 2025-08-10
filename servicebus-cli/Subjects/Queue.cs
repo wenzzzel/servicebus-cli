@@ -1,5 +1,4 @@
-﻿using System.Text;
-using servicebus_cli.Services;
+﻿using servicebus_cli.Services;
 using Spectre.Console;
 
 namespace servicebus_cli.Subjects;
@@ -46,9 +45,6 @@ public class Queue : IQueue
         {
             case "list":
                 await List(args.Skip(1).ToList());
-                break;
-            case "show":
-                await Show(args.Skip(1).ToList());
                 break;
             default:
                 _helpService.Run();
@@ -106,34 +102,5 @@ public class Queue : IQueue
         }
 
         AnsiConsole.Write(table);
-    }
-
-// TODO: Remove this Action if it's not needed
-    private async Task Show(List<string> args)
-    {
-        var fullyQualifiedNamespace = "";
-        var queueName = "";
-
-        switch (args.Count)
-        {
-            case 1:
-                fullyQualifiedNamespace = args[0];
-                break;
-            case 2:
-                fullyQualifiedNamespace = args[0];
-                queueName = args[1];
-                break;
-            default:
-                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
-                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
-                );
-                queueName = await AnsiConsole.PromptAsync(
-                    new TextPrompt<string>("Enter a [green]queue name[/]:")
-                );
-                break;
-        }
-
-        AnsiConsole.MarkupLine($"[grey]Showing queue {queueName} on {fullyQualifiedNamespace}...[/]");
-        await _serviceBusService.ShowQueue(fullyQualifiedNamespace, queueName);
     }
 }
