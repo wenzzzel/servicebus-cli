@@ -21,7 +21,9 @@ public class ServiceBusService(IServiceBusRepository serviceBusRepostitory) : IS
     {
         var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
         var queues = new List<QueueProperties>();
-        await foreach (var queue in adminClient.GetQueuesAsync())
+        
+        // Collect all queue properties first
+        await foreach (var queue in adminClient.GetQueuesAsync().ConfigureAwait(false))
         {
             var regex = $".*{filter}.*";
             Match match = Regex.Match(queue.Name, regex, RegexOptions.IgnoreCase);
@@ -32,14 +34,18 @@ public class ServiceBusService(IServiceBusRepository serviceBusRepostitory) : IS
             queues.Add(queue);
         }
 
+        // Now get runtime properties for each queue
         var retVal = new List<QueueModel>();
         foreach (var queue in queues)
         {
-            var properties = await adminClient.GetQueueRuntimePropertiesAsync(queue.Name);
+            var properties = await adminClient.GetQueueRuntimePropertiesAsync(queue.Name).ConfigureAwait(false);
             var model = new QueueModel(queue, properties.Value);
             retVal.Add(model);
         }
 
+        // Ensure all async operations are completed
+        await Task.Yield();
+        
         return retVal;
     }
 

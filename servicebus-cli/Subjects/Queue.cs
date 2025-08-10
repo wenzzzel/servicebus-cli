@@ -77,29 +77,40 @@ public class Queue : IQueue
                 break;
         }
 
-        var queues = await _serviceBusService.GetQueues(fullyQualifiedNamespace, filter);
+        //TODO: Investigate if the table can be built in a status block to show progress
 
-        AnsiConsole.MarkupLine($"[grey]Listing queues on {fullyQualifiedNamespace}...[/]");
-        
-        var table = new Table();
-        table.AddColumn("📮 [bold]Queue Name[/]");
-        table.AddColumn("[green]Active[/]");
-        table.AddColumn("[red]Dead Letter[/]");
-        table.AddColumn("[blue]Scheduled[/]");
+        var table = await AnsiConsole.Status()
+            .StartAsync($"Listing queues on {fullyQualifiedNamespace}...", async ctx => 
+            {
+                ctx.Spinner(Spinner.Known.Dots);
+                ctx.SpinnerStyle(Style.Parse("yellow"));
+                
+                var queues = await _serviceBusService.GetQueues(fullyQualifiedNamespace, filter).ConfigureAwait(false);
+                
+                ctx.Status("Building table...");
+                
+                var resultTable = new Table();
+                resultTable.AddColumn("📮 [bold]Queue Name[/]");
+                resultTable.AddColumn("[green]Active[/]");
+                resultTable.AddColumn("[red]Dead Letter[/]");
+                resultTable.AddColumn("[blue]Scheduled[/]");
 
-        foreach (var queue in queues)
-        {
-            var activeMessageCount = queue.QueueRuntimeProperties.ActiveMessageCount;
-            var deadLetterMessageCount = queue.QueueRuntimeProperties.DeadLetterMessageCount;
-            var scheduledMessageCount = queue.QueueRuntimeProperties.ScheduledMessageCount;
+                foreach (var queue in queues)
+                {
+                    var activeMessageCount = queue.QueueRuntimeProperties.ActiveMessageCount;
+                    var deadLetterMessageCount = queue.QueueRuntimeProperties.DeadLetterMessageCount;
+                    var scheduledMessageCount = queue.QueueRuntimeProperties.ScheduledMessageCount;
 
-            table.AddRow(
-                queue.QueueProperties.Name,
-                $"[green]{activeMessageCount}[/]",
-                $"[red]{deadLetterMessageCount}[/]",
-                $"[blue]{scheduledMessageCount}[/]"
-            );
-        }
+                    resultTable.AddRow(
+                        queue.QueueProperties.Name,
+                        $"[green]{activeMessageCount}[/]",
+                        $"[red]{deadLetterMessageCount}[/]",
+                        $"[blue]{scheduledMessageCount}[/]"
+                    );
+                }
+                
+                return resultTable;
+            });
 
         AnsiConsole.Write(table);
     }
