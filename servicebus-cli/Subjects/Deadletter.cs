@@ -12,12 +12,12 @@ public interface IDeadletter
 public class Deadletter : IDeadletter
 {
     private readonly IHelp _helpService;
-    private readonly IServiceBusService _serviceBusRepostitory;
+    private readonly IServiceBusService _serviceBusService;
 
     public Deadletter(IHelp helpService, IServiceBusService serviceBusRepostitory)
     {
         _helpService = helpService;
-        _serviceBusRepostitory = serviceBusRepostitory;
+        _serviceBusService = serviceBusRepostitory;
     }
 
     public async Task Run(string[] args)
@@ -78,7 +78,16 @@ public class Deadletter : IDeadletter
                     new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
                 );
 
-                var queues = await _serviceBusRepostitory.GetQueues(fullyQualifiedNamespace);
+                var queues = await AnsiConsole.Status()
+                    .StartAsync($"Fetching queues on {fullyQualifiedNamespace}...", async ctx =>
+                    {
+                        ctx.Spinner(Spinner.Known.Dots);
+                        ctx.SpinnerStyle(Style.Parse("yellow"));
+
+                        return await _serviceBusService.GetQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                    });
+
+
                 var selectedQueue = await AnsiConsole.PromptAsync(
                     new SelectionPrompt<string>()
                         .Title("Select a [green]queue[/]:")
@@ -88,6 +97,7 @@ public class Deadletter : IDeadletter
                 );
                 entityPath = selectedQueue.Split(' ')[0];
                 useSession = await AnsiConsole.ConfirmAsync("Use session?");
+                    
                 break;
         }
 
@@ -99,14 +109,14 @@ public class Deadletter : IDeadletter
             return;
         }
 
-        var deadletterCount = await _serviceBusRepostitory.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
+        var deadletterCount = await _serviceBusService.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
         if (deadletterCount is null or 0)
         {
             AnsiConsole.MarkupLine($"[red]ERROR:[/] No deadletter messages found in queue {entityPath}");
             return;
         }
 
-        var queue = _serviceBusRepostitory.ConnectToQueue(fullyQualifiedNamespace, entityPath);
+        var queue = _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
         var resentDlCount = 0;
         IReadOnlyList<ServiceBusReceivedMessage> messages;
         await AnsiConsole.Status().StartAsync($"Resending messages... 0 / {deadletterCount}", async ctx =>
@@ -132,10 +142,7 @@ public class Deadletter : IDeadletter
         });
 
         if (resentDlCount > deadletterCount)
-            AnsiConsole.MarkupLine(@$"[red]WARNING:[/] The count of resent messages ({resentDlCount}) was greater than the 
-            initial deadletter count ({deadletterCount}). This may happen due to deadletters being re-sent and 
-            ending up on the deadletter queue again before the resend job was able to finish. It is an indicator that 
-            there are bad messages on your deadletter queue that should be handled and/or removed instead of resent.");
+            AnsiConsole.MarkupLine(@$"[red]WARNING:[/] The count of resent messages ({resentDlCount}) was greater than the initial deadletter count ({deadletterCount}). This may happen due to deadletters being re-sent and ending up on the deadletter queue again before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent.");
         else
             AnsiConsole.MarkupLine(@$"[green]Success![/] [grey]Resent {resentDlCount} messages from deadletter queue {entityPath}[/]");
     }
@@ -155,7 +162,16 @@ public class Deadletter : IDeadletter
                 fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
                     new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
                 );
-                var queues = await _serviceBusRepostitory.GetQueues(fullyQualifiedNamespace);
+
+                var queues = await AnsiConsole.Status()
+                    .StartAsync($"Fetching queues on {fullyQualifiedNamespace}...", async ctx =>
+                    {
+                        ctx.Spinner(Spinner.Known.Dots);
+                        ctx.SpinnerStyle(Style.Parse("yellow"));
+
+                        return await _serviceBusService.GetQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                    });
+                
                 var selectedQueue = await AnsiConsole.PromptAsync(
                     new SelectionPrompt<string>()
                         .Title("Select a [green]queue[/]:")
@@ -175,14 +191,14 @@ public class Deadletter : IDeadletter
             return;
         }
 
-        var deadletterCountTotal = await _serviceBusRepostitory.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
+        var deadletterCountTotal = await _serviceBusService.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
         if (deadletterCountTotal is null or 0)
         {
             AnsiConsole.MarkupLine($"[red]ERROR:[/] No deadletter messages found in queue {entityPath}");
             return;
         }
 
-        var queue = _serviceBusRepostitory.ConnectToQueue(fullyQualifiedNamespace, entityPath);
+        var queue = _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
 
         var deletedDeadletterCount = 0;
         IReadOnlyList<ServiceBusReceivedMessage> messages;
@@ -199,11 +215,8 @@ public class Deadletter : IDeadletter
         });
 
         if (deletedDeadletterCount > deadletterCountTotal)
-            AnsiConsole.MarkupLine(@$"[red]WARNING:[/] The count of deleted messages ({deletedDeadletterCount}) was greater 
-            than the initial deadletter count ({deadletterCountTotal}). This may happen due to that deadletters are 
-            appearing on the deadletter queue while deleting. It might be good idea to investigate why this is happening.");
+            AnsiConsole.MarkupLine(@$"[red]WARNING:[/] The count of deleted messages ({deletedDeadletterCount}) was greater than the initial deadletter count ({deadletterCountTotal}). This may happen due to that deadletters are appearing on the deadletter queue while deleting. It might be good idea to investigate why this is happening.");
         else
-            AnsiConsole.MarkupLine(@$"[green]Success![/] [grey]Deleted {deletedDeadletterCount} messages from deadletter 
-            queue {entityPath}[/]");
+            AnsiConsole.MarkupLine(@$"[green]Success![/] [grey]Deleted {deletedDeadletterCount} messages from deadletter queue {entityPath}[/]");
     }
 }
