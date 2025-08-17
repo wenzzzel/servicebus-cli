@@ -29,8 +29,7 @@ public class Queue : IQueue
                     .Title("Action: ")
                     .PageSize(10)
                     .AddChoices(
-                        "list",
-                        "show"
+                        "list"
                     )
             );
         }
