@@ -8,16 +8,16 @@ namespace servicebus_cli.Services;
 
 public interface IServiceBusService
 {
-    Task<List<QueueModel>> GetQueues(string fullyQualifiedNamespace, string filter = "");
+    Task<List<QueueInformation>> GetInformationAboutAllQueues(string fullyQualifiedNamespace, string filter = "");
     Task<long?> GetDeadLetterCount(string fullyQualifiedNamespace, string entityPath);
-    ServiceBusConnection ConnectToQueue(string fullyQualifiedNamespace, string entityPath);
+    Task<ServiceBusConnection> ConnectToQueue(string fullyQualifiedNamespace, string entityPath);
 }
 
 public class ServiceBusService(IServiceBusRepository serviceBusRepostitory) : IServiceBusService
 {
     private readonly IServiceBusRepository _serviceBusRepository = serviceBusRepostitory;
 
-    public async Task<List<QueueModel>> GetQueues(string fullyQualifiedNamespace, string filter = "")
+    public async Task<List<QueueInformation>> GetInformationAboutAllQueues(string fullyQualifiedNamespace, string filter = "")
     {
         var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
         var queues = new List<QueueProperties>();
@@ -35,11 +35,11 @@ public class ServiceBusService(IServiceBusRepository serviceBusRepostitory) : IS
         }
 
         // Now get runtime properties for each queue
-        var retVal = new List<QueueModel>();
+        var retVal = new List<QueueInformation>();
         foreach (var queue in queues)
         {
             var properties = await adminClient.GetQueueRuntimePropertiesAsync(queue.Name).ConfigureAwait(false);
-            var model = new QueueModel(queue, properties.Value);
+            var model = new QueueInformation(queue, properties.Value);
             retVal.Add(model);
         }
 
@@ -56,8 +56,14 @@ public class ServiceBusService(IServiceBusRepository serviceBusRepostitory) : IS
         return properties?.Value?.DeadLetterMessageCount;
     }
 
-    public ServiceBusConnection ConnectToQueue(string fullyQualifiedNamespace, string entityPath)
+    public async Task<ServiceBusConnection> ConnectToQueue(string fullyQualifiedNamespace, string entityPath)
     {
+        // Get info about queue (might be nice to have)
+        var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
+        var runtimeProperties = await adminClient.GetQueueRuntimePropertiesAsync(entityPath);
+        var queueProperties = await adminClient.GetQueueAsync(entityPath);
+
+        // Connect to the actual receivers and senders
         var deadletterReceiverOptions = new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter, ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete };
         var messageReceiverOptions = new ServiceBusReceiverOptions { SubQueue = SubQueue.None, ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete };
         var serviceBusClient = _serviceBusRepository.GetServiceBusClient(fullyQualifiedNamespace);
@@ -65,7 +71,7 @@ public class ServiceBusService(IServiceBusRepository serviceBusRepostitory) : IS
         var messageReceiver = serviceBusClient.CreateReceiver(entityPath, messageReceiverOptions);
         var sender = serviceBusClient.CreateSender(entityPath);
 
-        var connection = new ServiceBusConnection(deadletterReceiver, messageReceiver, sender);
+        var connection = new ServiceBusConnection(deadletterReceiver, messageReceiver, sender, runtimeProperties, queueProperties);
 
         return connection;
     }

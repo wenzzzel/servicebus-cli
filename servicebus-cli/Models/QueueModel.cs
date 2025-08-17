@@ -2,12 +2,12 @@ using Azure.Messaging.ServiceBus.Administration;
 
 namespace servicebus_cli.Models;
 
-public class QueueModel
+public class QueueInformation
 {
     public QueueProperties QueueProperties { get; }
     public QueueRuntimeProperties QueueRuntimeProperties { get; }
 
-    public QueueModel(QueueProperties queueProperties, QueueRuntimeProperties queueRuntimeProperties)
+    public QueueInformation(QueueProperties queueProperties, QueueRuntimeProperties queueRuntimeProperties)
     {
         QueueProperties = queueProperties;
         QueueRuntimeProperties = queueRuntimeProperties;

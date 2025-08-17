@@ -38,7 +38,6 @@ public class Help : IHelp
         var resendNode = deadletterNode.AddNode("[green]resend[/] - Resend messages from dead letter queue");
         resendNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
         resendNode.AddNode("[dim]<EntityPath>[/] - Queue or topic name");
-        resendNode.AddNode("[dim]<UseSessions>[/] - Use sessions (y/n)");
         
         var purgeNode = deadletterNode.AddNode("[green]purge[/] - Remove all messages from dead letter queue");
         purgeNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");

@@ -84,7 +84,7 @@ public class Queue : IQueue
                 ctx.Spinner(Spinner.Known.Dots);
                 ctx.SpinnerStyle(Style.Parse("yellow"));
                 
-                var queues = await _serviceBusService.GetQueues(fullyQualifiedNamespace, filter).ConfigureAwait(false);
+                var queuesWithInformation = await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace, filter).ConfigureAwait(false);
                 
                 ctx.Status("Building table...");
                 
@@ -94,14 +94,14 @@ public class Queue : IQueue
                 resultTable.AddColumn("[red]Dead Letter[/]");
                 resultTable.AddColumn("[blue]Scheduled[/]");
 
-                foreach (var queue in queues)
+                foreach (var queueInfo in queuesWithInformation)
                 {
-                    var activeMessageCount = queue.QueueRuntimeProperties.ActiveMessageCount;
-                    var deadLetterMessageCount = queue.QueueRuntimeProperties.DeadLetterMessageCount;
-                    var scheduledMessageCount = queue.QueueRuntimeProperties.ScheduledMessageCount;
+                    var activeMessageCount = queueInfo.QueueRuntimeProperties.ActiveMessageCount;
+                    var deadLetterMessageCount = queueInfo.QueueRuntimeProperties.DeadLetterMessageCount;
+                    var scheduledMessageCount = queueInfo.QueueRuntimeProperties.ScheduledMessageCount;
 
                     resultTable.AddRow(
-                        queue.QueueProperties.Name,
+                        queueInfo.QueueProperties.Name,
                         $"[green]{activeMessageCount}[/]",
                         $"[red]{deadLetterMessageCount}[/]",
                         $"[blue]{scheduledMessageCount}[/]"

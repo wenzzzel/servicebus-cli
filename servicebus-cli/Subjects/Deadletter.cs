@@ -60,18 +60,12 @@ public class Deadletter : IDeadletter
     {
         var fullyQualifiedNamespace = "";
         var entityPath = "";
-        bool useSession = false;
 
         switch (args.Count)
         {
             case 2:
                 fullyQualifiedNamespace = args[0];
                 entityPath = args[1];
-                break;
-            case 3:
-                fullyQualifiedNamespace = args[0];
-                entityPath = args[1];
-                useSession = args[2].ToUpper() == "Y";
                 break;
             default:
                 fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
@@ -84,7 +78,7 @@ public class Deadletter : IDeadletter
                         ctx.Spinner(Spinner.Known.Dots);
                         ctx.SpinnerStyle(Style.Parse("yellow"));
 
-                        return await _serviceBusService.GetQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                        return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
                     });
 
 
@@ -96,7 +90,6 @@ public class Deadletter : IDeadletter
                         .AddChoices(queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList())
                 );
                 entityPath = selectedQueue.Split(' ')[0];
-                useSession = await AnsiConsole.ConfirmAsync("Use session?");
                     
                 break;
         }
@@ -116,7 +109,7 @@ public class Deadletter : IDeadletter
             return;
         }
 
-        var queue = _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
+        var queue = await _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
         var resentDlCount = 0;
         IReadOnlyList<ServiceBusReceivedMessage> messages;
         await AnsiConsole.Status().StartAsync($"Resending messages... 0 / {deadletterCount}", async ctx =>
@@ -130,7 +123,7 @@ public class Deadletter : IDeadletter
                 {
                     var sendMessage = new ServiceBusMessage(message);
 
-                    if (useSession)
+                    if (queue.QueueProperties.RequiresSession) //Only set session id if the queue supports sessions
                         sendMessage.SessionId = message.SessionId;
 
                     tasks.Add(queue.Sender.SendMessageAsync(sendMessage));
@@ -169,7 +162,7 @@ public class Deadletter : IDeadletter
                         ctx.Spinner(Spinner.Known.Dots);
                         ctx.SpinnerStyle(Style.Parse("yellow"));
 
-                        return await _serviceBusService.GetQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                        return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
                     });
                 
                 var selectedQueue = await AnsiConsole.PromptAsync(
@@ -198,7 +191,7 @@ public class Deadletter : IDeadletter
             return;
         }
 
-        var queue = _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
+        var queue = await _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
 
         var deletedDeadletterCount = 0;
         IReadOnlyList<ServiceBusReceivedMessage> messages;
