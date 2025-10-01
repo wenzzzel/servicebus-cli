@@ -12,8 +12,11 @@ public class Program
         var serviceProvider = new ServiceCollection()
             .AddSingleton<IServiceBusCli, ServiceBusCli>()
             .AddSingleton<IDeadletter, Deadletter>()
+            .AddSingleton<ISettings, Settings>()
             .AddSingleton<IQueue, Queue>()
             .AddSingleton<IServiceBusService, ServiceBusService>()
+            .AddSingleton<IFileService, FileService>()
+            .AddSingleton<IUserSettingsService, UserSettingsService>()
             .AddSingleton<IServiceBusRepository, ServiceBusRepository>()
             .AddSingleton<IHelp, Help>()
             .BuildServiceProvider();

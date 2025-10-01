@@ -12,11 +12,15 @@ public class Queue : IQueue
 {
     private readonly IHelp _helpService;
     private readonly IServiceBusService _serviceBusService;
+    private readonly IFileService _fileService;
+    private readonly IUserSettingsService _userSettingsService;
 
-    public Queue(IHelp helpService, IServiceBusService serviceBusRepostitory)
+    public Queue(IHelp helpService, IServiceBusService serviceBusRepostitory, IFileService fileService, IUserSettingsService settingsService)
     {
         _helpService = helpService;
+        _fileService = fileService;
         _serviceBusService = serviceBusRepostitory;
+        _userSettingsService = settingsService;
     }
 
     public async Task Run(string[] args)
@@ -55,6 +59,8 @@ public class Queue : IQueue
     {
         var fullyQualifiedNamespace = "";
         var filter = "";
+        var settingsFileContent = _fileService.GetConfigFileContent();
+        var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
 
         switch (args.Count)
         {
@@ -66,9 +72,23 @@ public class Queue : IQueue
                 filter = args[1];
                 break;
             default:
-                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
-                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
-                );
+                if (!savedNamespaces.FullyQualifiedNamespaces.Any())
+                {
+                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                        new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
+                    );
+                }
+                else
+                {
+                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                        new SelectionPrompt<string>()
+                            .Title("Select a fully qualified namespace:")
+                            .PageSize(10)
+                            .AddChoices(savedNamespaces.FullyQualifiedNamespaces)
+                    );
+                    AnsiConsole.MarkupLine($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
+                }
+
                 filter = await AnsiConsole.PromptAsync(
                     new TextPrompt<string>("Enter a [green]filter[/] (optional):")
                         .AllowEmpty()

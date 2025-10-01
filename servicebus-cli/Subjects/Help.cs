@@ -50,6 +50,19 @@ public class Help : IHelp
         listNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
         listNode.AddNode("[dim]<Filter>[/] - Optional filter pattern");
 
+        // Settings branch
+        var settingsNode = tree.AddNode("[bold yellow]settings[/] - Local settings management operations");
+        
+        var getNode = settingsNode.AddNode("[green]get[/] - Get local user setting");
+        getNode.AddNode("[dim]<SettingName>[/] - Name of the setting to get. Available settings are: FullyQualifiedNamespaces");
+
+        var setNode = settingsNode.AddNode("[green]set[/] - Set local user setting");
+        setNode.AddNode("[dim]<SettingName>[/] - Name of the setting to set. Available settings are: FullyQualifiedNamespaces");
+        setNode.AddNode("[dim]<SettingValue>[/] - Value to set for the setting");
+
+        // Help branch
+        var _ = tree.AddNode("[bold yellow]help[/] - Displays the help section");
+
         // Render the tree
         AnsiConsole.Write(tree);
         AnsiConsole.WriteLine();

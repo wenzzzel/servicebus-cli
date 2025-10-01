@@ -13,11 +13,13 @@ public class ServiceBusCli : IServiceBusCli
     private IDeadletter _deadletter;
     private IQueue queue;
     private IHelp _help;
+    private ISettings _settings;
 
-    public ServiceBusCli(IDeadletter deadletter, IHelp help, IQueue queue)
+    public ServiceBusCli(IDeadletter deadletter, IHelp help, IQueue queue, ISettings settings)
     {
         _help = help;
         _deadletter = deadletter;
+        _settings = settings;
         this.queue = queue;
     }
 
@@ -34,6 +36,7 @@ public class ServiceBusCli : IServiceBusCli
                     .AddChoices(
                         "deadletter",
                         "queue",
+                        "settings",
                         "help"
                     )
             );
@@ -52,6 +55,9 @@ public class ServiceBusCli : IServiceBusCli
                 break;
             case "queue":
                 await queue.Run(args.Skip(1).ToArray());
+                break;
+            case "settings":
+                await _settings.Run(args.Skip(1).ToArray());
                 break;
             default:
                 _help.Run();

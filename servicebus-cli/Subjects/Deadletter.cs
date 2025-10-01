@@ -13,11 +13,16 @@ public class Deadletter : IDeadletter
 {
     private readonly IHelp _helpService;
     private readonly IServiceBusService _serviceBusService;
+    private readonly IFileService _fileService;
+    private readonly IUserSettingsService _userSettingsService;
 
-    public Deadletter(IHelp helpService, IServiceBusService serviceBusRepostitory)
+
+    public Deadletter(IHelp helpService, IServiceBusService serviceBusRepostitory, IFileService fileService, IUserSettingsService userSettingsService)
     {
         _helpService = helpService;
         _serviceBusService = serviceBusRepostitory;
+        _fileService = fileService;
+        _userSettingsService = userSettingsService;
     }
 
     public async Task Run(string[] args)
@@ -60,6 +65,8 @@ public class Deadletter : IDeadletter
     {
         var fullyQualifiedNamespace = "";
         var entityPath = "";
+        var settingsFileContent = _fileService.GetConfigFileContent();
+        var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
 
         switch (args.Count)
         {
@@ -68,9 +75,22 @@ public class Deadletter : IDeadletter
                 entityPath = args[1];
                 break;
             default:
-                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
-                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
-                );
+                if (!savedNamespaces.FullyQualifiedNamespaces.Any())
+                {
+                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                        new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
+                    );
+                }
+                else
+                {
+                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                        new SelectionPrompt<string>()
+                            .Title("Select a fully qualified namespace:")
+                            .PageSize(10)
+                            .AddChoices(savedNamespaces.FullyQualifiedNamespaces)
+                    );
+                    AnsiConsole.MarkupLine($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
+                }
 
                 var queues = await AnsiConsole.Status()
                     .StartAsync($"Fetching queues on {fullyQualifiedNamespace}...", async ctx =>
@@ -90,7 +110,9 @@ public class Deadletter : IDeadletter
                         .AddChoices(queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList())
                 );
                 entityPath = selectedQueue.Split(' ')[0];
-                    
+
+                AnsiConsole.MarkupLine($"[grey]Selected queue: {entityPath}[/]");
+
                 break;
         }
 
@@ -144,6 +166,8 @@ public class Deadletter : IDeadletter
     {
         var fullyQualifiedNamespace = "";
         var entityPath = "";
+        var settingsFileContent = _fileService.GetConfigFileContent();
+        var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
 
         switch (args.Count)
         {
@@ -152,9 +176,22 @@ public class Deadletter : IDeadletter
                 entityPath = args[1];
                 break;
             default:
-                fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
-                    new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
-                );
+                if (!savedNamespaces.FullyQualifiedNamespaces.Any())
+                {
+                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                        new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:") //Here
+                    );
+                }
+                else
+                {
+                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
+                        new SelectionPrompt<string>()
+                            .Title("Select a fully qualified namespace:")
+                            .PageSize(10)
+                            .AddChoices(savedNamespaces.FullyQualifiedNamespaces)
+                    );
+                    AnsiConsole.MarkupLine($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
+                }
 
                 var queues = await AnsiConsole.Status()
                     .StartAsync($"Fetching queues on {fullyQualifiedNamespace}...", async ctx =>
@@ -164,7 +201,7 @@ public class Deadletter : IDeadletter
 
                         return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
                     });
-                
+
                 var selectedQueue = await AnsiConsole.PromptAsync(
                     new SelectionPrompt<string>()
                         .Title("Select a [green]queue[/]:")
@@ -173,6 +210,9 @@ public class Deadletter : IDeadletter
                         .AddChoices(queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList())
                 );
                 entityPath = selectedQueue.Split(' ')[0];
+
+                AnsiConsole.MarkupLine($"[grey]Selected queue: {entityPath}[/]");
+                
                 break;
         }
 
