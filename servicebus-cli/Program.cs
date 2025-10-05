@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using servicebus_cli.Repositories;
 using servicebus_cli.Services;
-using servicebus_cli.Subjects;
 using servicebus_cli.Subjects.Deadletter;
 using servicebus_cli.Subjects.Deadletter.Actions;
 using servicebus_cli.Subjects.Queue;
@@ -31,11 +30,12 @@ public class Program
             .AddSingleton<IServiceBusService, ServiceBusService>()
             .AddSingleton<IFileService, FileService>()
             .AddSingleton<IUserSettingsService, UserSettingsService>()
+            .AddSingleton<IConsoleService, ConsoleService>()
             // Repositories
             .AddSingleton<IServiceBusRepository, ServiceBusRepository>()
             .BuildServiceProvider();
 
-        var serviceBusCli = serviceProvider.GetService<IServiceBusCli>();
+        var serviceBusCli = serviceProvider.GetRequiredService<IServiceBusCli>();
         await serviceBusCli.Run(args);
     }
 }

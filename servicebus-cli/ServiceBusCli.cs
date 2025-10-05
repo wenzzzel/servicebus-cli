@@ -1,4 +1,4 @@
-﻿using servicebus_cli.Subjects;
+﻿using servicebus_cli.Services;
 using servicebus_cli.Subjects.Deadletter;
 using servicebus_cli.Subjects.Queue;
 using servicebus_cli.Subjects.Settings;
@@ -12,40 +12,22 @@ public interface IServiceBusCli
 }
 
 public class ServiceBusCli(
-    IDeadletter deadletter,
-    IHelp help,
-    IQueue queue,
-    ISettings settings) : IServiceBusCli
+    IDeadletter _deadletter,
+    IHelp _help,
+    IQueue _queue,
+    ISettings _settings,
+    IConsoleService _consoleService) : IServiceBusCli
 {
-    private readonly IDeadletter _deadletter = deadletter;
-    private readonly IQueue _queue = queue;
-    private readonly IHelp _help = help;
-    private readonly ISettings _settings = settings;
-
     public async Task Run(string[] args)
     {
         string selectedSubject;
 
         if (args.Length == 0)
-        {
-            selectedSubject = await AnsiConsole.PromptAsync(
-                new SelectionPrompt<string>()
-                    .Title("Subject: ")
-                    .PageSize(10)
-                    .AddChoices(
-                        "deadletter",
-                        "queue",
-                        "settings",
-                        "help"
-                    )
-            );
-        }
+            selectedSubject = await _consoleService.PromptForSubject();
         else
-        {
             selectedSubject = args[0];
-        }
 
-        AnsiConsole.MarkupLine($"[grey]Selected subject: {selectedSubject}[/]");
+        _consoleService.WriteMarkup($"[grey]Selected subject: {selectedSubject}[/]");
 
         switch (selectedSubject)
         {

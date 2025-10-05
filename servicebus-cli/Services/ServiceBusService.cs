@@ -13,10 +13,8 @@ public interface IServiceBusService
     Task<ServiceBusConnection> ConnectToQueue(string fullyQualifiedNamespace, string entityPath);
 }
 
-public class ServiceBusService(IServiceBusRepository serviceBusRepostitory) : IServiceBusService
+public class ServiceBusService(IServiceBusRepository _serviceBusRepository) : IServiceBusService
 {
-    private readonly IServiceBusRepository _serviceBusRepository = serviceBusRepostitory;
-
     public async Task<List<QueueInformation>> GetInformationAboutAllQueues(string fullyQualifiedNamespace, string filter = "")
     {
         var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);

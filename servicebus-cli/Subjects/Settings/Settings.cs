@@ -1,5 +1,4 @@
 ﻿using servicebus_cli.Services;
-using Spectre.Console;
 
 namespace servicebus_cli.Subjects.Settings;
 
@@ -8,29 +7,17 @@ public interface ISettings
     Task Run(string[] args);
 }
 
-public class Settings(IHelp _helpSubject, ISettingsActions _settingsActions) : ISettings
+public class Settings(IHelp _helpSubject, ISettingsActions _settingsActions, IConsoleService _consoleService) : ISettings
 {
     public async Task Run(string[] args)
     {
         string selectedAction = "";
         if (args.Length < 1)
-        {
-            selectedAction = await AnsiConsole.PromptAsync(
-                new SelectionPrompt<string>()
-                    .Title("Action: ")
-                    .PageSize(10)
-                    .AddChoices(
-                        "get",
-                        "set"
-                    )
-            );
-        }
+            selectedAction = await _consoleService.PromptForAction<SettingsActions>();
         else
-        {
             selectedAction = args[0];
-        }
 
-        AnsiConsole.MarkupLine($"[grey]Selected action: {selectedAction}[/]");
+        _consoleService.WriteMarkup($"[grey]Selected action: {selectedAction}[/]");
 
         switch (selectedAction)
         {
