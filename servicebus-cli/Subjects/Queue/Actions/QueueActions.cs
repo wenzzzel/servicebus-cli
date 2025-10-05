@@ -1,61 +1,23 @@
 ﻿using servicebus_cli.Services;
 using Spectre.Console;
 
-namespace servicebus_cli.Subjects;
+namespace servicebus_cli.Subjects.Queue.Actions;
 
-public interface IQueue
+public interface IQueueActions
 {
-    Task Run(string[] args);
+    Task List(List<string> args);
 }
 
-public class Queue : IQueue
+public class QueueActions(
+    IServiceBusService serviceBusRepostitory,
+    IFileService fileService,
+    IUserSettingsService settingsService) : IQueueActions
 {
-    private readonly IHelp _helpService;
-    private readonly IServiceBusService _serviceBusService;
-    private readonly IFileService _fileService;
-    private readonly IUserSettingsService _userSettingsService;
+    private readonly IServiceBusService _serviceBusService = serviceBusRepostitory;
+    private readonly IFileService _fileService = fileService;
+    private readonly IUserSettingsService _userSettingsService = settingsService;
 
-    public Queue(IHelp helpService, IServiceBusService serviceBusRepostitory, IFileService fileService, IUserSettingsService settingsService)
-    {
-        _helpService = helpService;
-        _fileService = fileService;
-        _serviceBusService = serviceBusRepostitory;
-        _userSettingsService = settingsService;
-    }
-
-    public async Task Run(string[] args)
-    {
-        string selectedAction;
-        if (args.Length < 1)
-        {
-            selectedAction = await AnsiConsole.PromptAsync(
-                new SelectionPrompt<string>()
-                    .Title("Action: ")
-                    .PageSize(10)
-                    .AddChoices(
-                        "list"
-                    )
-            );
-        }
-        else
-        {
-            selectedAction = args[0];
-        }
-
-        AnsiConsole.MarkupLine($"[grey]Selected action: {selectedAction}[/]");
-
-        switch (selectedAction)
-        {
-            case "list":
-                await List(args.Skip(1).ToList());
-                break;
-            default:
-                _helpService.Run();
-                break;
-        }
-    }
-
-    private async Task List(List<string> args)
+    public async Task List(List<string> args)
     {
         var fullyQualifiedNamespace = "";
         var filter = "";

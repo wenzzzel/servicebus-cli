@@ -2,66 +2,24 @@
 using servicebus_cli.Services;
 using Spectre.Console;
 
-namespace servicebus_cli.Subjects;
+namespace servicebus_cli.Subjects.Deadletter.Actions;
 
-public interface IDeadletter
+public interface IDeadletterActions
 {
-    Task Run(string[] args);
+    Task Resend(List<string> args);
+    Task Purge(List<string> args);
 }
 
-public class Deadletter : IDeadletter
+public class DeadletterActions(
+    IServiceBusService serviceBusRepostitory,
+    IFileService fileService,
+    IUserSettingsService userSettingsService) : IDeadletterActions
 {
-    private readonly IHelp _helpService;
-    private readonly IServiceBusService _serviceBusService;
-    private readonly IFileService _fileService;
-    private readonly IUserSettingsService _userSettingsService;
+    private readonly IServiceBusService _serviceBusService = serviceBusRepostitory;
+    private readonly IFileService _fileService = fileService;
+    private readonly IUserSettingsService _userSettingsService = userSettingsService;
 
-
-    public Deadletter(IHelp helpService, IServiceBusService serviceBusRepostitory, IFileService fileService, IUserSettingsService userSettingsService)
-    {
-        _helpService = helpService;
-        _serviceBusService = serviceBusRepostitory;
-        _fileService = fileService;
-        _userSettingsService = userSettingsService;
-    }
-
-    public async Task Run(string[] args)
-    {
-        string selectedAction = "";
-        if (args.Length < 1)
-        {
-            selectedAction = await AnsiConsole.PromptAsync(
-                new SelectionPrompt<string>()
-                    .Title("Action: ")
-                    .PageSize(10)
-                    .AddChoices(
-                        "resend",
-                        "purge"
-                    )
-            );
-        }
-        else
-        {
-            selectedAction = args[0];
-        }
-
-        AnsiConsole.MarkupLine($"[grey]Selected action: {selectedAction}[/]");
-
-        switch (selectedAction)
-        {
-            case "resend":
-                await Resend(args.Skip(1).ToList());
-                break;
-            case "purge":
-                await Purge(args.Skip(1).ToList());
-                break;
-            default:
-                _helpService.Run();
-                break;
-        }
-    }
-
-    private async Task Resend(List<string> args)
+    public async Task Resend(List<string> args)
     {
         var fullyQualifiedNamespace = "";
         var entityPath = "";
@@ -162,7 +120,7 @@ public class Deadletter : IDeadletter
             AnsiConsole.MarkupLine(@$"[green]Success![/] [grey]Resent {resentDlCount} messages from deadletter queue {entityPath}[/]");
     }
 
-    private async Task Purge(List<string> args)
+    public async Task Purge(List<string> args)
     {
         var fullyQualifiedNamespace = "";
         var entityPath = "";

@@ -2,63 +2,24 @@
 using servicebus_cli.Services;
 using Spectre.Console;
 
-namespace servicebus_cli.Subjects;
+namespace servicebus_cli.Subjects.Settings;
 
-public interface ISettings
+public interface ISettingsActions
 {
-    Task Run(string[] args);
+    Task Get(string[] args);
+    Task Set(string[] args);
 }
 
-public class Settings : ISettings
+public class SettingsActions(
+    IHelp helpService,
+    IUserSettingsService userSettingsService,
+    IFileService fileService) : ISettingsActions
 {
-    private readonly IHelp _helpService;
-    private readonly IUserSettingsService _userSettingsService;
-    private readonly IFileService _fileService;
+    private readonly IHelp _helpService = helpService;
+    private readonly IUserSettingsService _userSettingsService = userSettingsService;
+    private readonly IFileService _fileService = fileService;
 
-    public Settings(IHelp helpService, IUserSettingsService userSettingsService, IFileService fileService)
-    {
-        _helpService = helpService;
-        _userSettingsService = userSettingsService;
-        _fileService = fileService;
-    }
-
-    public async Task Run(string[] args)
-    {
-        string selectedAction = "";
-        if (args.Length < 1)
-        {
-            selectedAction = await AnsiConsole.PromptAsync(
-                new SelectionPrompt<string>()
-                    .Title("Action: ")
-                    .PageSize(10)
-                    .AddChoices(
-                        "get",
-                        "set"
-                    )
-            );
-        }
-        else
-        {
-            selectedAction = args[0];
-        }
-
-        AnsiConsole.MarkupLine($"[grey]Selected action: {selectedAction}[/]");
-
-        switch (selectedAction)
-        {
-            case "get":
-                await Get(args.Skip(1).ToArray());
-                break;
-            case "set":
-                await Set(args.Skip(1).ToArray());
-                break;
-            default:
-                _helpService.Run();
-                break;
-        }
-    }
-
-    private async Task Get(string[] args)
+    public async Task Get(string[] args)
     {
         string selectedSetting = "";
         if (args.Length < 1)
@@ -100,7 +61,7 @@ public class Settings : ISettings
         }
     }
 
-    private async Task Set(string[] args)
+    public async Task Set(string[] args)
     {
         string selectedSetting = "";
         if (args.Length < 1)

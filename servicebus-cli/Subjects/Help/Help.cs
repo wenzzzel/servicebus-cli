@@ -1,6 +1,6 @@
 ﻿using Spectre.Console;
 
-namespace servicebus_cli.Subjects;
+namespace servicebus_cli.Subjects.Help;
 
 public interface IHelp
 {
