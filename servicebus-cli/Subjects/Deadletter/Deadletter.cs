@@ -8,11 +8,8 @@ public interface IDeadletter
     Task Run(string[] args);
 }
 
-public class Deadletter(IHelp helpService, IDeadletterActions deadletterActions) : IDeadletter
+public class Deadletter(IHelp _helpSubject, IDeadletterActions _deadletterActions) : IDeadletter
 {
-    private readonly IHelp _helpService = helpService;
-    private readonly IDeadletterActions _deadletterActions = deadletterActions;
-
     public async Task Run(string[] args)
     {
         string selectedAction = "";
@@ -44,7 +41,7 @@ public class Deadletter(IHelp helpService, IDeadletterActions deadletterActions)
                 await _deadletterActions.Purge(args.Skip(1).ToList());
                 break;
             default:
-                _helpService.Run();
+                _helpSubject.Run();
                 break;
         }
     }

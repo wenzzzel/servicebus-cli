@@ -8,17 +8,8 @@ public interface ISettings
     Task Run(string[] args);
 }
 
-public class Settings(
-    IHelp helpService,
-    IUserSettingsService userSettingsService,
-    IFileService fileService,
-    ISettingsActions settingsActions) : ISettings
+public class Settings(IHelp _helpSubject, ISettingsActions _settingsActions) : ISettings
 {
-    private readonly IHelp _helpService = helpService;
-    private readonly IUserSettingsService _userSettingsService = userSettingsService;
-    private readonly IFileService _fileService = fileService;
-    private readonly ISettingsActions _settingsActions = settingsActions;
-
     public async Task Run(string[] args)
     {
         string selectedAction = "";
@@ -50,7 +41,7 @@ public class Settings(
                 await _settingsActions.Set(args.Skip(1).ToArray());
                 break;
             default:
-                _helpService.Run();
+                _helpSubject.Run();
                 break;
         }
     }
