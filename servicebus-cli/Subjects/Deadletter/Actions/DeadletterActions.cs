@@ -1,6 +1,5 @@
 ﻿using Azure.Messaging.ServiceBus;
 using servicebus_cli.Services;
-using Spectre.Console;
 
 namespace servicebus_cli.Subjects.Deadletter.Actions;
 
@@ -44,15 +43,14 @@ public class DeadletterActions(
 
                 _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
 
-                var queues = await AnsiConsole.Status()
-                    .StartAsync($"Fetching queues on {fullyQualifiedNamespace}...", async ctx =>
-                    {
-                        ctx.Spinner(Spinner.Known.Dots);
-                        ctx.SpinnerStyle(Style.Parse("yellow"));
+                var getQueuesWorkload = async () =>
+                {
+                    return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                };
 
-                        return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
-                    });
-
+                var queues = await _consoleService.ProcessWorkloadWithSpinner(
+                    $"Fetching queues on {fullyQualifiedNamespace}...",
+                    getQueuesWorkload);
 
                 var selectedQueue = await _consoleService.PromptSelection(
                     "Select a [green]queue[/]:",
@@ -82,36 +80,31 @@ public class DeadletterActions(
         }
 
         var queue = await _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
-        var resentDlCount = 0;
-        IReadOnlyList<ServiceBusReceivedMessage> messages;
 
-        //TODO: Try to use ProcessWorkloadWithStatusUpdates here
-        await AnsiConsole.Status().StartAsync($"Resending messages... 0 / {deadletterCount}", async ctx =>
+        var resendMessagesWorkload = async () =>
         {
-            do
+            var messages = await queue.DeadletterReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
+            var tasks = new List<Task>();
+
+            foreach (var message in messages)
             {
-                messages = await queue.DeadletterReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
-                var tasks = new List<Task>();
+                var sendMessage = new ServiceBusMessage(message);
 
-                foreach (var message in messages)
-                {
-                    var sendMessage = new ServiceBusMessage(message);
+                if (queue.QueueProperties.RequiresSession) //Only set session id if the queue supports sessions
+                    sendMessage.SessionId = message.SessionId;
 
-                    if (queue.QueueProperties.RequiresSession) //Only set session id if the queue supports sessions
-                        sendMessage.SessionId = message.SessionId;
+                tasks.Add(queue.Sender.SendMessageAsync(sendMessage));
+            }
+            await Task.WhenAll(tasks);
+            return messages;
+        };
 
-                    tasks.Add(queue.Sender.SendMessageAsync(sendMessage));
-                }
-                await Task.WhenAll(tasks);
-                resentDlCount += messages.Count;
-                ctx.Status($"Resending messages... {resentDlCount} / {deadletterCount}");
-            } while (messages.Count > 0 && resentDlCount < deadletterCount);
-        });
-
-        if (resentDlCount > deadletterCount)
-            _consoleService.WriteWarning($"The count of resent messages ({resentDlCount}) was greater than the initial deadletter count ({deadletterCount}). This may happen due to deadletters being re-sent and ending up on the deadletter queue again before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent.");
-        else
-            _consoleService.WriteSuccess($"Resent {resentDlCount} messages from deadletter queue {entityPath}");
+        await _consoleService.ProcessWorkloadWithStatusUpdates<ServiceBusReceivedMessage, IReadOnlyList<ServiceBusReceivedMessage>>(
+            "Resending",
+            "Resent",
+            "The count of resent messages was greater than the initial deadletter count. This may happen due to deadletters being re-sent and ending up on the deadletter queue again before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent. ",
+            deadletterCount.Value,
+            resendMessagesWorkload);
     }
 
     public async Task Purge(List<string> args)
@@ -142,12 +135,12 @@ public class DeadletterActions(
 
                 _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
 
-                var asyncWorkload = async () =>
+                var purgeMessagesWorkload = async () =>
                 {
                     return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
                 };
 
-                var queues = await _consoleService.ProcessWorkloadWithSpinner($"Fetching queues on {fullyQualifiedNamespace}...", asyncWorkload);
+                var queues = await _consoleService.ProcessWorkloadWithSpinner($"Fetching queues on {fullyQualifiedNamespace}...", purgeMessagesWorkload);
 
                 var selectedQueue = await _consoleService.PromptSelection(
                     "Select a [green]queue[/]:",
@@ -178,7 +171,7 @@ public class DeadletterActions(
 
         var queue = await _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
 
-        var asyncWorkload2 = async () =>
+        var deleteMessagesWorkload = async () =>
         {
             return await queue.DeadletterReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30)); //Simply receiving messages deletes them as well
         };
@@ -188,6 +181,6 @@ public class DeadletterActions(
             "Deleted",
             "This is usually a sign that there are new deadletter messages arriving while purging. It might be good idea to investigate why this is happening.",
             deadletterCountTotal.Value,
-            asyncWorkload2);
+            deleteMessagesWorkload);
     }
 }
