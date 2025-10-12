@@ -11,14 +11,11 @@ public interface IDeadletterActions
 }
 
 public class DeadletterActions(
-    IServiceBusService serviceBusRepostitory,
-    IFileService fileService,
-    IUserSettingsService userSettingsService) : IDeadletterActions
+    IServiceBusService _serviceBusService,
+    IFileService _fileService,
+    IUserSettingsService _userSettingsService,
+    IConsoleService _consoleService) : IDeadletterActions
 {
-    private readonly IServiceBusService _serviceBusService = serviceBusRepostitory;
-    private readonly IFileService _fileService = fileService;
-    private readonly IUserSettingsService _userSettingsService = userSettingsService;
-
     public async Task Resend(List<string> args)
     {
         var fullyQualifiedNamespace = "";
@@ -35,20 +32,17 @@ public class DeadletterActions(
             default:
                 if (!savedNamespaces.FullyQualifiedNamespaces.Any())
                 {
-                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
-                        new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:")
-                    );
+                    fullyQualifiedNamespace = await _consoleService.PromptFreeText(
+                        "Enter the [green]fully qualified namespace[/]:");
                 }
                 else
                 {
-                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
-                        new SelectionPrompt<string>()
-                            .Title("Select a fully qualified namespace:")
-                            .PageSize(10)
-                            .AddChoices(savedNamespaces.FullyQualifiedNamespaces)
-                    );
-                    AnsiConsole.MarkupLine($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
+                    fullyQualifiedNamespace = await _consoleService.PromptSelection(
+                        "Select a fully qualified namespace:",
+                        savedNamespaces.FullyQualifiedNamespaces);
                 }
+
+                _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
 
                 var queues = await AnsiConsole.Status()
                     .StartAsync($"Fetching queues on {fullyQualifiedNamespace}...", async ctx =>
@@ -60,32 +54,30 @@ public class DeadletterActions(
                     });
 
 
-                var selectedQueue = await AnsiConsole.PromptAsync(
-                    new SelectionPrompt<string>()
-                        .Title("Select a [green]queue[/]:")
-                        .PageSize(30)
-                        .EnableSearch()
-                        .AddChoices(queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList())
-                );
+                var selectedQueue = await _consoleService.PromptSelection(
+                    "Select a [green]queue[/]:",
+                    queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList(),
+                    enableSearch: true);
+
                 entityPath = selectedQueue.Split(' ')[0];
 
-                AnsiConsole.MarkupLine($"[grey]Selected queue: {entityPath}[/]");
+                _consoleService.WriteMarkup($"[grey]Selected queue: {entityPath}[/]");
 
                 break;
         }
 
-        var confirmed = await AnsiConsole.ConfirmAsync(@$"[red]WARNING:[/] This action will resend all deadletter messages. Stopping the application before it's finished may result in data loss! Do you want to continue?");
+        var confirmed = await _consoleService.ConfirmWarning($"This action will resend all deadletter messages. Stopping the application before it's finished may result in data loss! Do you want to continue?");
 
         if (!confirmed)
         {
-            AnsiConsole.MarkupLine("[red]Operation cancelled.[/]");
+            _consoleService.WriteMarkup("[red]Operation cancelled.[/]");
             return;
         }
 
         var deadletterCount = await _serviceBusService.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
         if (deadletterCount is null or 0)
         {
-            AnsiConsole.MarkupLine($"[red]ERROR:[/] No deadletter messages found in queue {entityPath}");
+            _consoleService.WriteError($"No deadletter messages found in queue {entityPath}");
             return;
         }
 
@@ -115,9 +107,9 @@ public class DeadletterActions(
         });
 
         if (resentDlCount > deadletterCount)
-            AnsiConsole.MarkupLine(@$"[red]WARNING:[/] The count of resent messages ({resentDlCount}) was greater than the initial deadletter count ({deadletterCount}). This may happen due to deadletters being re-sent and ending up on the deadletter queue again before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent.");
+            _consoleService.WriteWarning($"The count of resent messages ({resentDlCount}) was greater than the initial deadletter count ({deadletterCount}). This may happen due to deadletters being re-sent and ending up on the deadletter queue again before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent.");
         else
-            AnsiConsole.MarkupLine(@$"[green]Success![/] [grey]Resent {resentDlCount} messages from deadletter queue {entityPath}[/]");
+            _consoleService.WriteSuccess($"Resent {resentDlCount} messages from deadletter queue {entityPath}");
     }
 
     public async Task Purge(List<string> args)
@@ -136,20 +128,17 @@ public class DeadletterActions(
             default:
                 if (!savedNamespaces.FullyQualifiedNamespaces.Any())
                 {
-                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
-                        new TextPrompt<string>("Enter the [green]fully qualified namespace[/]:") //Here
-                    );
+                    fullyQualifiedNamespace = await _consoleService.PromptFreeText(
+                        "Enter the [green]fully qualified namespace[/]:");
                 }
                 else
                 {
-                    fullyQualifiedNamespace = await AnsiConsole.PromptAsync(
-                        new SelectionPrompt<string>()
-                            .Title("Select a fully qualified namespace:")
-                            .PageSize(10)
-                            .AddChoices(savedNamespaces.FullyQualifiedNamespaces)
-                    );
-                    AnsiConsole.MarkupLine($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
+                    fullyQualifiedNamespace = await _consoleService.PromptSelection(
+                        "Select a fully qualified namespace:",
+                        savedNamespaces.FullyQualifiedNamespaces);
                 }
+                
+                _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
 
                 var queues = await AnsiConsole.Status()
                     .StartAsync($"Fetching queues on {fullyQualifiedNamespace}...", async ctx =>
@@ -160,32 +149,30 @@ public class DeadletterActions(
                         return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
                     });
 
-                var selectedQueue = await AnsiConsole.PromptAsync(
-                    new SelectionPrompt<string>()
-                        .Title("Select a [green]queue[/]:")
-                        .PageSize(30)
-                        .EnableSearch()
-                        .AddChoices(queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList())
-                );
+                var selectedQueue = await _consoleService.PromptSelection(
+                    "Select a [green]queue[/]:",
+                    queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList(),
+                    enableSearch: true);
+
                 entityPath = selectedQueue.Split(' ')[0];
 
-                AnsiConsole.MarkupLine($"[grey]Selected queue: {entityPath}[/]");
-                
+                _consoleService.WriteMarkup($"[grey]Selected queue: {entityPath}[/]");
+
                 break;
         }
-
-        var confirmed = await AnsiConsole.ConfirmAsync($"[red]WARNING:[/] This action will purge all deadletter messages. Do you want to continue?");
+        
+        var confirmed = await _consoleService.ConfirmWarning("This action will purge all deadletter messages. Do you want to continue?");
 
         if (!confirmed)
         {
-            AnsiConsole.MarkupLine("[red]Operation cancelled.[/]");
+            _consoleService.WriteMarkup("[red]Operation cancelled.[/]");
             return;
         }
 
         var deadletterCountTotal = await _serviceBusService.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
         if (deadletterCountTotal is null or 0)
         {
-            AnsiConsole.MarkupLine($"[red]ERROR:[/] No deadletter messages found in queue {entityPath}");
+            _consoleService.WriteError($"No deadletter messages found in queue {entityPath}");
             return;
         }
 
@@ -206,8 +193,8 @@ public class DeadletterActions(
         });
 
         if (deletedDeadletterCount > deadletterCountTotal)
-            AnsiConsole.MarkupLine(@$"[red]WARNING:[/] The count of deleted messages ({deletedDeadletterCount}) was greater than the initial deadletter count ({deadletterCountTotal}). This may happen due to that deadletters are appearing on the deadletter queue while deleting. It might be good idea to investigate why this is happening.");
+            _consoleService.WriteWarning($"The count of deleted messages ({deletedDeadletterCount}) was greater than the initial deadletter count ({deadletterCountTotal}). This may happen due to that deadletters are appearing on the deadletter queue while deleting. It might be good idea to investigate why this is happening.");
         else
-            AnsiConsole.MarkupLine(@$"[green]Success![/] [grey]Deleted {deletedDeadletterCount} messages from deadletter queue {entityPath}[/]");
+            _consoleService.WriteSuccess($"Deleted {deletedDeadletterCount} messages from deadletter queue {entityPath}");
     }
 }
