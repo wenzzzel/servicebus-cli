@@ -47,11 +47,11 @@ public class QueueActions(
                 _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
 
                 filter = await _consoleService.PromptFreeText("Enter a [green]filter[/] (optional):");
-                
+
                 break;
         }
 
-        //TODO: Investigate if the table can be built in a status block to show progress
+        //TODO: Wrap this inside ConsoleService
 
         var table = await AnsiConsole.Status()
             .StartAsync($"Listing queues on {fullyQualifiedNamespace}...", async ctx => 
