@@ -29,7 +29,7 @@ public interface IConsoleService
 
 public class ConsoleService() : IConsoleService
 {
-    public Task<bool> ConfirmWarning(string message) => AnsiConsole.ConfirmAsync($"[yellow]Warning:[/]" + message);
+    public Task<bool> ConfirmWarning(string message) => AnsiConsole.ConfirmAsync($"[yellow]Warning:[/] " + message);
 
     public void WriteError(string markup) => AnsiConsole.MarkupLine($"[red]Error:[/] " + markup);
     public void WriteWarning(string markup) => AnsiConsole.MarkupLine($"[yellow]Warning:[/] " + markup);
