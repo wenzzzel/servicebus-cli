@@ -84,6 +84,8 @@ public class DeadletterActions(
         var queue = await _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
         var resentDlCount = 0;
         IReadOnlyList<ServiceBusReceivedMessage> messages;
+
+        //TODO: Try to use ProcessWorkloadWithStatusUpdates here
         await AnsiConsole.Status().StartAsync($"Resending messages... 0 / {deadletterCount}", async ctx =>
         {
             do
@@ -137,17 +139,15 @@ public class DeadletterActions(
                         "Select a fully qualified namespace:",
                         savedNamespaces.FullyQualifiedNamespaces);
                 }
-                
+
                 _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
 
-                var queues = await AnsiConsole.Status()
-                    .StartAsync($"Fetching queues on {fullyQualifiedNamespace}...", async ctx =>
-                    {
-                        ctx.Spinner(Spinner.Known.Dots);
-                        ctx.SpinnerStyle(Style.Parse("yellow"));
+                var asyncWorkload = async () =>
+                {
+                    return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                };
 
-                        return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
-                    });
+                var queues = await _consoleService.ProcessWorkloadWithSpinner($"Fetching queues on {fullyQualifiedNamespace}...", asyncWorkload);
 
                 var selectedQueue = await _consoleService.PromptSelection(
                     "Select a [green]queue[/]:",
@@ -178,23 +178,16 @@ public class DeadletterActions(
 
         var queue = await _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
 
-        var deletedDeadletterCount = 0;
-        IReadOnlyList<ServiceBusReceivedMessage> messages;
-        await AnsiConsole.Status().StartAsync($"Deleting messages... 0 / {deadletterCountTotal}", async ctx =>
+        var asyncWorkload2 = async () =>
         {
-            do
-            {
-                messages = await queue.DeadletterReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30)); //Simply receiving messages deletes them as well
+            return await queue.DeadletterReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30)); //Simply receiving messages deletes them as well
+        };
 
-                deletedDeadletterCount += messages.Count;
-                ctx.Status($"Deleting messages... {deletedDeadletterCount} / {deadletterCountTotal}");
-
-            } while (messages.Count > 0 && deletedDeadletterCount < deadletterCountTotal);
-        });
-
-        if (deletedDeadletterCount > deadletterCountTotal)
-            _consoleService.WriteWarning($"The count of deleted messages ({deletedDeadletterCount}) was greater than the initial deadletter count ({deadletterCountTotal}). This may happen due to that deadletters are appearing on the deadletter queue while deleting. It might be good idea to investigate why this is happening.");
-        else
-            _consoleService.WriteSuccess($"Deleted {deletedDeadletterCount} messages from deadletter queue {entityPath}");
+        await _consoleService.ProcessWorkloadWithStatusUpdates<ServiceBusReceivedMessage, IReadOnlyList<ServiceBusReceivedMessage>>(
+            "Deleting",
+            "Deleted",
+            "This is usually a sign that there are new deadletter messages arriving while purging. It might be good idea to investigate why this is happening.",
+            deadletterCountTotal.Value,
+            asyncWorkload2);
     }
 }

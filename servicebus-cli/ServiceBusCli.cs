@@ -2,7 +2,6 @@
 using servicebus_cli.Subjects.Deadletter;
 using servicebus_cli.Subjects.Queue;
 using servicebus_cli.Subjects.Settings;
-using Spectre.Console;
 
 namespace servicebus_cli;
 
