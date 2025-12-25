@@ -1,5 +1,4 @@
 ﻿using servicebus_cli.Services;
-using Spectre.Console;
 
 namespace servicebus_cli.Subjects.Queue.Actions;
 
@@ -51,41 +50,38 @@ public class QueueActions(
                 break;
         }
 
-        //TODO: Wrap this inside ConsoleService
+        var queueInfoWorkload = async () =>
+        {
+            return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace, filter).ConfigureAwait(false);
+        };    
 
-        var table = await AnsiConsole.Status()
-            .StartAsync($"Listing queues on {fullyQualifiedNamespace}...", async ctx => 
-            {
-                ctx.Spinner(Spinner.Known.Dots);
-                ctx.SpinnerStyle(Style.Parse("yellow"));
-                
-                var queuesWithInformation = await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace, filter).ConfigureAwait(false);
-                
-                ctx.Status("Building table...");
-                
-                var resultTable = new Table();
-                resultTable.AddColumn("📮 [bold]Queue Name[/]");
-                resultTable.AddColumn("[green]Active[/]");
-                resultTable.AddColumn("[red]Dead Letter[/]");
-                resultTable.AddColumn("[blue]Scheduled[/]");
+        var queuesWithInformation = await _consoleService.ProcessWorkloadWithSpinner(
+            $"Listing queues on {fullyQualifiedNamespace}...", 
+            queueInfoWorkload);
 
-                foreach (var queueInfo in queuesWithInformation)
-                {
-                    var activeMessageCount = queueInfo.QueueRuntimeProperties.ActiveMessageCount;
-                    var deadLetterMessageCount = queueInfo.QueueRuntimeProperties.DeadLetterMessageCount;
-                    var scheduledMessageCount = queueInfo.QueueRuntimeProperties.ScheduledMessageCount;
+        var headers = new List<string> { 
+            "📮 [bold]Queue Name[/]", 
+            "[green]Active[/]", 
+            "[red]Dead Letter[/]", 
+            "[blue]Scheduled[/]" 
+        };
 
-                    resultTable.AddRow(
-                        queueInfo.QueueProperties.Name,
-                        $"[green]{activeMessageCount}[/]",
-                        $"[red]{deadLetterMessageCount}[/]",
-                        $"[blue]{scheduledMessageCount}[/]"
-                    );
-                }
-                
-                return resultTable;
+        var rows = new List<List<string>>();
+
+        foreach (var queueInfo in queuesWithInformation)
+        {
+            var activeMessageCount = queueInfo.QueueRuntimeProperties.ActiveMessageCount;
+            var deadLetterMessageCount = queueInfo.QueueRuntimeProperties.DeadLetterMessageCount;
+            var scheduledMessageCount = queueInfo.QueueRuntimeProperties.ScheduledMessageCount;
+
+            rows.Add(new List<string> {
+                queueInfo.QueueProperties.Name,
+                $"[green]{activeMessageCount}[/]",
+                $"[red]{deadLetterMessageCount}[/]",
+                $"[blue]{scheduledMessageCount}[/]"
             });
+        }
 
-        AnsiConsole.Write(table);
+        _consoleService.WriteTable(headers, rows);
     }
 }

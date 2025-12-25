@@ -17,6 +17,7 @@ public interface IConsoleService
     Task<string> PromptForAction<ActionType>();
     Task<string> PromptSelection(string title, IEnumerable<string> choices, bool enableSearch = false);
     Task<string> PromptFreeText(string title, bool allowEmpty = false);
+    void WriteTable(List<string> headers, List<List<string>> rows);
     Task<T> ProcessWorkloadWithSpinner<T>(string message, Func<Task<T>> func);
     Task ProcessWorkloadWithStatusUpdates<TItem, TCollection>(
         string taskDescriptionCurrentTense,
@@ -80,6 +81,21 @@ public class ConsoleService() : IConsoleService
             return AnsiConsole.PromptAsync(new TextPrompt<string>(title).AllowEmpty());
 
         return AnsiConsole.PromptAsync(new TextPrompt<string>(title));
+    }
+
+    public void WriteTable(List<string> headers, List<List<string>> rows)
+    {
+        //TODO: Make sure columns and rows match
+
+        var table = new Table();
+
+        foreach (var header in headers)
+            table.AddColumn(header);
+
+        foreach (var row in rows)
+            table.AddRow(row.ToArray());   
+
+        AnsiConsole.Write(table);
     }
 
     public Task<T> ProcessWorkloadWithSpinner<T>(string message, Func<Task<T>> func)
