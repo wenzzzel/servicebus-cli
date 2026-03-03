@@ -45,7 +45,7 @@ public class QueueActions(
                 
                 _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
 
-                filter = await _consoleService.PromptFreeText("Enter a [green]filter[/] (optional):");
+                filter = await _consoleService.PromptFreeText("Enter a [green]filter[/] (optional):", allowEmpty: true);
 
                 break;
         }

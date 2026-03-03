@@ -3,6 +3,7 @@ using servicebus_cli.Subjects.Deadletter.Actions;
 using servicebus_cli.Subjects.Queue.Actions;
 using servicebus_cli.Subjects.Settings;
 using Spectre.Console;
+using Spectre.Console.Json;
 
 namespace servicebus_cli.Services;
 
@@ -10,6 +11,7 @@ public interface IConsoleService
 {
     Task<bool> ConfirmWarning(string message);
     void WriteMarkup(string markup);
+    void WriteJson(string json);
     void WriteError(string markup);
     void WriteWarning(string markup);
     void WriteSuccess(string markup);
@@ -38,12 +40,18 @@ public class ConsoleService() : IConsoleService
 
     public void WriteMarkup(string markup) => AnsiConsole.MarkupLine(markup);
 
+    public void WriteJson(string json) 
+    {
+        var beautifulJson = new JsonText(json);
+        AnsiConsole.Write(beautifulJson);
+    }
+
     public Task<string> PromptForSubject() => PromptSelection("Subject: ", ["deadletter", "queue", "settings", "help"]);
 
     public Task<string> PromptForAction<ActionType>()
     {
         if (typeof(ActionType) == typeof(DeadletterActions))
-            return PromptSelection("Action: ", ["resend", "purge"]);
+            return PromptSelection("Action: ", ["resend", "purge", "peek"]);
 
         if (typeof(ActionType) == typeof(QueueActions))
             return PromptSelection("Action: ", ["list"]);

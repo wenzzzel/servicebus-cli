@@ -32,6 +32,9 @@ public class Deadletter(IHelp _helpSubject, IDeadletterActions _deadletterAction
             case "purge":
                 await _deadletterActions.Purge(args.Skip(1).ToList());
                 break;
+            case "peek":
+                await _deadletterActions.Peek(args.Skip(1).ToList());
+                break;
             default:
                 _helpSubject.Run();
                 break;

@@ -1,5 +1,6 @@
 ﻿using Azure.Messaging.ServiceBus;
 using servicebus_cli.Services;
+using System.Text.Json;
 
 namespace servicebus_cli.Subjects.Deadletter.Actions;
 
@@ -7,6 +8,7 @@ public interface IDeadletterActions
 {
     Task Resend(List<string> args);
     Task Purge(List<string> args);
+    Task Peek(List<string> args);
 }
 
 public class DeadletterActions(
@@ -105,6 +107,93 @@ public class DeadletterActions(
             "The count of resent messages was greater than the initial deadletter count. This may happen due to deadletters being re-sent and ending up on the deadletter queue again before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent. ",
             deadletterCount.Value,
             resendMessagesWorkload);
+    }
+
+    public async Task Peek(List<string> args)
+    {
+        var fullyQualifiedNamespace = "";
+        var entityPath = "";
+        var settingsFileContent = _fileService.GetConfigFileContent();
+        var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
+
+        switch (args.Count)
+        {
+            case 2:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                break;
+            default:
+                if (!savedNamespaces.FullyQualifiedNamespaces.Any())
+                {
+                    fullyQualifiedNamespace = await _consoleService.PromptFreeText(
+                        "Enter the [green]fully qualified namespace[/]:");
+                }
+                else
+                {
+                    fullyQualifiedNamespace = await _consoleService.PromptSelection(
+                        "Select a fully qualified namespace:",
+                        savedNamespaces.FullyQualifiedNamespaces);
+                }
+
+                _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
+
+                var peekQueuesWorkload = async () =>
+                {
+                    return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                };
+
+                var queues = await _consoleService.ProcessWorkloadWithSpinner(
+                    $"Fetching queues on {fullyQualifiedNamespace}...",
+                    peekQueuesWorkload);
+
+                var selectedQueue = await _consoleService.PromptSelection(
+                    "Select a [green]queue[/]:",
+                    queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList(),
+                    enableSearch: true);
+
+                entityPath = selectedQueue.Split(' ')[0];
+
+                _consoleService.WriteMarkup($"[grey]Selected queue: {entityPath}[/]");
+
+                break;
+        }
+
+        var peekWorkload = async () =>
+        {
+            return await _serviceBusService.PeekDeadLetterMessages(fullyQualifiedNamespace, entityPath).ConfigureAwait(false);
+        };
+
+        var messages = await _consoleService.ProcessWorkloadWithSpinner(
+            $"Peeking deadletter messages on {entityPath}...",
+            peekWorkload);
+
+        if (messages.Count == 0)
+        {
+            _consoleService.WriteError($"No deadletter messages found in queue {entityPath}");
+            return;
+        }
+
+        var jsonMessages = messages.Select(m => new
+        {
+            m.MessageId,
+            Body = m.Body?.ToString(),
+            m.Subject,
+            m.ContentType,
+            m.CorrelationId,
+            m.DeadLetterReason,
+            m.DeadLetterErrorDescription,
+            m.DeadLetterSource,
+            m.EnqueuedTime,
+            m.ExpiresAt,
+            m.SequenceNumber,
+            m.DeliveryCount,
+            ApplicationProperties = m.ApplicationProperties.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+        });
+
+        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+        var json = JsonSerializer.Serialize(jsonMessages, jsonOptions);
+
+        _consoleService.WriteJson(json);
     }
 
     public async Task Purge(List<string> args)

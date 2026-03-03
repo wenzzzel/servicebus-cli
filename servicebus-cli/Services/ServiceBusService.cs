@@ -11,6 +11,7 @@ public interface IServiceBusService
     Task<List<QueueInformation>> GetInformationAboutAllQueues(string fullyQualifiedNamespace, string filter = "");
     Task<long?> GetDeadLetterCount(string fullyQualifiedNamespace, string entityPath);
     Task<ServiceBusConnection> ConnectToQueue(string fullyQualifiedNamespace, string entityPath);
+    Task<IReadOnlyList<ServiceBusReceivedMessage>> PeekDeadLetterMessages(string fullyQualifiedNamespace, string entityPath, int maxMessages = 1000);
 }
 
 public class ServiceBusService(IServiceBusRepository _serviceBusRepository) : IServiceBusService
@@ -52,6 +53,24 @@ public class ServiceBusService(IServiceBusRepository _serviceBusRepository) : IS
         var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
         var properties = await adminClient.GetQueueRuntimePropertiesAsync(entityPath);
         return properties?.Value?.DeadLetterMessageCount;
+    }
+
+    public async Task<IReadOnlyList<ServiceBusReceivedMessage>> PeekDeadLetterMessages(string fullyQualifiedNamespace, string entityPath, int maxMessages = 1000)
+    {
+        var serviceBusClient = _serviceBusRepository.GetServiceBusClient(fullyQualifiedNamespace);
+        var receiverOptions = new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter };
+        var receiver = serviceBusClient.CreateReceiver(entityPath, receiverOptions);
+
+        var allMessages = new List<ServiceBusReceivedMessage>();
+        while (allMessages.Count < maxMessages)
+        {
+            var batch = await receiver.PeekMessagesAsync(maxMessages - allMessages.Count);
+            if (batch.Count == 0)
+                break;
+            allMessages.AddRange(batch);
+        }
+
+        return allMessages;
     }
 
     public async Task<ServiceBusConnection> ConnectToQueue(string fullyQualifiedNamespace, string entityPath)
