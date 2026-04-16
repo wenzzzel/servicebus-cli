@@ -54,7 +54,7 @@ public class ConsoleService() : IConsoleService
             return PromptSelection("Action: ", ["resend", "purge", "peek"]);
 
         if (typeof(ActionType) == typeof(QueueActions))
-            return PromptSelection("Action: ", ["list"]);
+            return PromptSelection("Action: ", ["list", "peek", "purge"]);
 
         if (typeof(ActionType) == typeof(SettingsActions))
             return PromptSelection("Action: ", ["get", "set"]); //TODO: Add list action

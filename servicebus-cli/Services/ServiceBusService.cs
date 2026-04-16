@@ -10,9 +10,12 @@ public interface IServiceBusService
 {
     Task<List<QueueInformation>> GetInformationAboutAllQueues(string fullyQualifiedNamespace, string filter = "");
     Task<long?> GetDeadLetterCount(string fullyQualifiedNamespace, string entityPath);
+    Task<long?> GetActiveMessageCount(string fullyQualifiedNamespace, string entityPath);
+    Task<bool> QueueRequiresSessions(string fullyQualifiedNamespace, string entityPath);
     Task<ServiceBusConnection> ConnectToQueue(string fullyQualifiedNamespace, string entityPath);
     Task<IReadOnlyList<ServiceBusReceivedMessage>> PeekDeadLetterMessages(string fullyQualifiedNamespace, string entityPath, int maxMessages = 1000);
     Task<IReadOnlyList<ServiceBusReceivedMessage>> PeekMessages(string fullyQualifiedNamespace, string entityPath, int maxMessages = 1000);
+    Task<Func<Task<IReadOnlyList<ServiceBusReceivedMessage>>>> CreateQueuePurgeWorkload(string fullyQualifiedNamespace, string entityPath);
 }
 
 public class ServiceBusService(IServiceBusRepository _serviceBusRepository) : IServiceBusService
@@ -56,6 +59,20 @@ public class ServiceBusService(IServiceBusRepository _serviceBusRepository) : IS
         return properties?.Value?.DeadLetterMessageCount;
     }
 
+    public async Task<long?> GetActiveMessageCount(string fullyQualifiedNamespace, string entityPath)
+    {
+        var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
+        var properties = await adminClient.GetQueueRuntimePropertiesAsync(entityPath);
+        return properties?.Value?.ActiveMessageCount;
+    }
+
+    public async Task<bool> QueueRequiresSessions(string fullyQualifiedNamespace, string entityPath)
+    {
+        var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
+        var queueProperties = await adminClient.GetQueueAsync(entityPath);
+        return queueProperties.Value.RequiresSession;
+    }
+
     public async Task<IReadOnlyList<ServiceBusReceivedMessage>> PeekDeadLetterMessages(string fullyQualifiedNamespace, string entityPath, int maxMessages = 1000)
     {
         var serviceBusClient = _serviceBusRepository.GetServiceBusClient(fullyQualifiedNamespace);
@@ -76,19 +93,97 @@ public class ServiceBusService(IServiceBusRepository _serviceBusRepository) : IS
 
     public async Task<IReadOnlyList<ServiceBusReceivedMessage>> PeekMessages(string fullyQualifiedNamespace, string entityPath, int maxMessages = 1000)
     {
+        var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
+        var queueProperties = await adminClient.GetQueueAsync(entityPath);
         var serviceBusClient = _serviceBusRepository.GetServiceBusClient(fullyQualifiedNamespace);
-        var receiver = serviceBusClient.CreateReceiver(entityPath);
 
         var allMessages = new List<ServiceBusReceivedMessage>();
-        while (allMessages.Count < maxMessages)
+
+        if (queueProperties.Value.RequiresSession)
         {
-            var batch = await receiver.PeekMessagesAsync(maxMessages - allMessages.Count);
-            if (batch.Count == 0)
-                break;
-            allMessages.AddRange(batch);
+            while (allMessages.Count < maxMessages)
+            {
+                try
+                {
+                    var sessionReceiver = await serviceBusClient.AcceptNextSessionAsync(entityPath);
+                    var batch = await sessionReceiver.PeekMessagesAsync(maxMessages - allMessages.Count);
+                    allMessages.AddRange(batch);
+                    await sessionReceiver.CloseAsync();
+                    if (batch.Count == 0) break;
+                }
+                catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.ServiceTimeout)
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            var receiver = serviceBusClient.CreateReceiver(entityPath);
+            while (allMessages.Count < maxMessages)
+            {
+                var batch = await receiver.PeekMessagesAsync(maxMessages - allMessages.Count);
+                if (batch.Count == 0)
+                    break;
+                allMessages.AddRange(batch);
+            }
         }
 
         return allMessages;
+    }
+
+    public async Task<Func<Task<IReadOnlyList<ServiceBusReceivedMessage>>>> CreateQueuePurgeWorkload(string fullyQualifiedNamespace, string entityPath)
+    {
+        var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
+        var queueProperties = await adminClient.GetQueueAsync(entityPath);
+        var serviceBusClient = _serviceBusRepository.GetServiceBusClient(fullyQualifiedNamespace);
+
+        if (queueProperties.Value.RequiresSession)
+        {
+            var sessionReceiverOptions = new ServiceBusSessionReceiverOptions
+            {
+                ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete
+            };
+
+            return async () =>
+            {
+                var tasks = Enumerable.Range(0, 10).Select(async _ =>
+                {
+                    var sessionMessages = new List<ServiceBusReceivedMessage>();
+                    try
+                    {
+                        var sessionReceiver = await serviceBusClient.AcceptNextSessionAsync(entityPath, sessionReceiverOptions);
+                        while (true)
+                        {
+                            var batch = await sessionReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(2));
+                            if (batch.Count == 0) break;
+                            sessionMessages.AddRange(batch);
+                        }
+                        await sessionReceiver.CloseAsync();
+                    }
+                    catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.ServiceTimeout)
+                    {
+                        // No more sessions available
+                    }
+                    return sessionMessages;
+                });
+
+                var results = await Task.WhenAll(tasks);
+                return (IReadOnlyList<ServiceBusReceivedMessage>)results.SelectMany(r => r).ToList();
+            };
+        }
+
+        var receiverOptions = new ServiceBusReceiverOptions
+        {
+            SubQueue = SubQueue.None,
+            ReceiveMode = ServiceBusReceiveMode.ReceiveAndDelete
+        };
+        var receiver = serviceBusClient.CreateReceiver(entityPath, receiverOptions);
+
+        return async () =>
+        {
+            return await receiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
+        };
     }
 
     public async Task<ServiceBusConnection> ConnectToQueue(string fullyQualifiedNamespace, string entityPath)

@@ -28,6 +28,9 @@ public class Queue(IHelp _helpSubject, IQueueActions _queueActions, IConsoleServ
             case "peek":
                 await _queueActions.Peek(args.Skip(1).ToList());
                 break;
+            case "purge":
+                await _queueActions.Purge(args.Skip(1).ToList());
+                break;
             default:
                 _helpSubject.Run();
                 break;

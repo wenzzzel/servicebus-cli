@@ -50,9 +50,12 @@ The following subjects and actions are available:
     - list
         - <FullyQualifiedNamespace>
         - <Filter>
-    - show
+    - peek
         - <FullyQualifiedNamespace>
-        - <QueueName>
+        - <EntityPath>
+    - purge
+        - <FullyQualifiedNamespace>
+        - <EntityPath>
 Example: servicebus-cli deadletter resend <FullyQualifiedNamespace> <EnitityPath>
 ```
 
@@ -73,6 +76,16 @@ servicebus-cli queue list "my-namespace.servicebus.windows.net" "my-queue"
 
 ```
 servicebus-cli queue show "my-namespace.servicebus.windows.net" "my-queue"
+```
+<p>Peek all messages in namespace <code>my-namespace</code> on queue <code>my-queue</code></p>
+
+```
+servicebus-cli queue peek "my-namespace.servicebus.windows.net" "my-queue"
+```
+<p>Purge all messages in namespace <code>my-namespace</code> on queue <code>my-queue</code></p>
+
+```
+servicebus-cli queue purge "my-namespace.servicebus.windows.net" "my-queue"
 ```
 <p>Purge all dead letter messages in namespace <code>my-namespace</code> on queue <code>my-entity-path</code> </p>
 

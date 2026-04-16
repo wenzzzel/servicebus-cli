@@ -58,6 +58,10 @@ public class Help : IHelp
         peekNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
         peekNode.AddNode("[dim]<EntityPath>[/] - Queue name");
 
+        var queuePurgeNode = queueNode.AddNode("[green]purge[/] - Remove all messages from queue");
+        queuePurgeNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
+        queuePurgeNode.AddNode("[dim]<EntityPath>[/] - Queue name");
+
         // Settings branch
         var settingsNode = tree.AddNode("[bold yellow]settings[/] - Local settings management operations");
         

@@ -1,4 +1,5 @@
-﻿using servicebus_cli.Services;
+﻿using Azure.Messaging.ServiceBus;
+using servicebus_cli.Services;
 using System.Text.Json;
 
 namespace servicebus_cli.Subjects.Queue.Actions;
@@ -7,6 +8,7 @@ public interface IQueueActions
 {
     Task List(List<string> args);
     Task Peek(List<string> args);
+    Task Purge(List<string> args);
 }
 
 public class QueueActions(
@@ -169,5 +171,85 @@ public class QueueActions(
         var json = JsonSerializer.Serialize(jsonMessages, jsonOptions);
 
         _consoleService.WriteJson(json);
+    }
+
+    public async Task Purge(List<string> args)
+    {
+        var fullyQualifiedNamespace = "";
+        var entityPath = "";
+        var settingsFileContent = _fileService.GetConfigFileContent();
+        var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
+
+        switch (args.Count)
+        {
+            case 2:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                break;
+            default:
+                if (!savedNamespaces.FullyQualifiedNamespaces.Any())
+                {
+                    fullyQualifiedNamespace = await _consoleService.PromptFreeText(
+                        "Enter the [green]fully qualified namespace[/]:");
+                }
+                else
+                {
+                    fullyQualifiedNamespace = await _consoleService.PromptSelection(
+                        "Select a fully qualified namespace:",
+                        savedNamespaces.FullyQualifiedNamespaces);
+                }
+
+                _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
+
+                var purgeQueuesWorkload = async () =>
+                {
+                    return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                };
+
+                var queues = await _consoleService.ProcessWorkloadWithSpinner(
+                    $"Fetching queues on {fullyQualifiedNamespace}...",
+                    purgeQueuesWorkload);
+
+                var selectedQueue = await _consoleService.PromptSelection(
+                    "Select a [green]queue[/]:",
+                    queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList(),
+                    enableSearch: true);
+
+                entityPath = selectedQueue.Split(' ')[0];
+
+                _consoleService.WriteMarkup($"[grey]Selected queue: {entityPath}[/]");
+
+                break;
+        }
+
+        var confirmed = await _consoleService.ConfirmWarning("This action will purge all messages in the queue. Do you want to continue?");
+
+        if (!confirmed)
+        {
+            _consoleService.WriteMarkup("[red]Operation cancelled.[/]");
+            return;
+        }
+
+        var requiresSessions = await _serviceBusService.QueueRequiresSessions(fullyQualifiedNamespace, entityPath);
+        if (requiresSessions)
+        {
+            _consoleService.WriteWarning("This queue has sessions enabled. Purging may be significantly slower due to session-based message retrieval.");
+        }
+
+        var activeMessageCount = await _serviceBusService.GetActiveMessageCount(fullyQualifiedNamespace, entityPath);
+        if (activeMessageCount is null or 0)
+        {
+            _consoleService.WriteError($"No messages found in queue {entityPath}");
+            return;
+        }
+
+        var deleteMessagesWorkload = await _serviceBusService.CreateQueuePurgeWorkload(fullyQualifiedNamespace, entityPath);
+
+        await _consoleService.ProcessWorkloadWithStatusUpdates<ServiceBusReceivedMessage, IReadOnlyList<ServiceBusReceivedMessage>>(
+            "Deleting",
+            "Deleted",
+            "This is usually a sign that there are new messages arriving while purging. The purging has stopped after the original count to avoid causing an infinite loop.",
+            activeMessageCount.Value,
+            deleteMessagesWorkload);
     }
 }
