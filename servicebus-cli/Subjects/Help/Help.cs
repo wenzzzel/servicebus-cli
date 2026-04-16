@@ -43,12 +43,20 @@ public class Help : IHelp
         purgeNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
         purgeNode.AddNode("[dim]<EntityPath>[/] - Queue or topic name");
 
+        var deadletterPeekNode = deadletterNode.AddNode("[green]peek[/] - View messages in dead letter queue");
+        deadletterPeekNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
+        deadletterPeekNode.AddNode("[dim]<EntityPath>[/] - Queue or topic name");
+
         // Queue branch
         var queueNode = tree.AddNode("[bold yellow]queue[/] - Queue management operations");
         
         var listNode = queueNode.AddNode("[green]list[/] - List queues in namespace");
         listNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
         listNode.AddNode("[dim]<Filter>[/] - Optional filter pattern");
+
+        var peekNode = queueNode.AddNode("[green]peek[/] - View messages in queue");
+        peekNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
+        peekNode.AddNode("[dim]<EntityPath>[/] - Queue name");
 
         // Settings branch
         var settingsNode = tree.AddNode("[bold yellow]settings[/] - Local settings management operations");

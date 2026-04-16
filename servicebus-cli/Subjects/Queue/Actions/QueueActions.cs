@@ -1,10 +1,12 @@
 ﻿using servicebus_cli.Services;
+using System.Text.Json;
 
 namespace servicebus_cli.Subjects.Queue.Actions;
 
 public interface IQueueActions
 {
     Task List(List<string> args);
+    Task Peek(List<string> args);
 }
 
 public class QueueActions(
@@ -83,5 +85,89 @@ public class QueueActions(
         }
 
         _consoleService.WriteTable(headers, rows);
+    }
+
+    public async Task Peek(List<string> args)
+    {
+        var fullyQualifiedNamespace = "";
+        var entityPath = "";
+        var settingsFileContent = _fileService.GetConfigFileContent();
+        var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
+
+        switch (args.Count)
+        {
+            case 2:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                break;
+            default:
+                if (!savedNamespaces.FullyQualifiedNamespaces.Any())
+                {
+                    fullyQualifiedNamespace = await _consoleService.PromptFreeText(
+                        "Enter the [green]fully qualified namespace[/]:");
+                }
+                else
+                {
+                    fullyQualifiedNamespace = await _consoleService.PromptSelection(
+                        "Select a fully qualified namespace:",
+                        savedNamespaces.FullyQualifiedNamespaces);
+                }
+
+                _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
+
+                var peekQueuesWorkload = async () =>
+                {
+                    return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                };
+
+                var queues = await _consoleService.ProcessWorkloadWithSpinner(
+                    $"Fetching queues on {fullyQualifiedNamespace}...",
+                    peekQueuesWorkload);
+
+                var selectedQueue = await _consoleService.PromptSelection(
+                    "Select a [green]queue[/]:",
+                    queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList(),
+                    enableSearch: true);
+
+                entityPath = selectedQueue.Split(' ')[0];
+
+                _consoleService.WriteMarkup($"[grey]Selected queue: {entityPath}[/]");
+
+                break;
+        }
+
+        var peekWorkload = async () =>
+        {
+            return await _serviceBusService.PeekMessages(fullyQualifiedNamespace, entityPath).ConfigureAwait(false);
+        };
+
+        var messages = await _consoleService.ProcessWorkloadWithSpinner(
+            $"Peeking messages on {entityPath}...",
+            peekWorkload);
+
+        if (messages.Count == 0)
+        {
+            _consoleService.WriteError($"No messages found in queue {entityPath}");
+            return;
+        }
+
+        var jsonMessages = messages.Select(m => new
+        {
+            m.MessageId,
+            Body = m.Body?.ToString(),
+            m.Subject,
+            m.ContentType,
+            m.CorrelationId,
+            m.EnqueuedTime,
+            m.ExpiresAt,
+            m.SequenceNumber,
+            m.DeliveryCount,
+            ApplicationProperties = m.ApplicationProperties.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+        });
+
+        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+        var json = JsonSerializer.Serialize(jsonMessages, jsonOptions);
+
+        _consoleService.WriteJson(json);
     }
 }
