@@ -138,6 +138,13 @@ public class QueueActions(
                 break;
         }
 
+        var requiresSessions = await _serviceBusService.QueueRequiresSessions(fullyQualifiedNamespace, entityPath);
+        if (requiresSessions)
+        {
+            _consoleService.WriteError("Peeking messages on queues with sessions enabled is not currently supported.");
+            return;
+        }
+
         var peekWorkload = async () =>
         {
             return await _serviceBusService.PeekMessages(fullyQualifiedNamespace, entityPath).ConfigureAwait(false);

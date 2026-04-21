@@ -93,40 +93,17 @@ public class ServiceBusService(IServiceBusRepository _serviceBusRepository) : IS
 
     public async Task<IReadOnlyList<ServiceBusReceivedMessage>> PeekMessages(string fullyQualifiedNamespace, string entityPath, int maxMessages = 1000)
     {
-        var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
-        var queueProperties = await adminClient.GetQueueAsync(entityPath);
         var serviceBusClient = _serviceBusRepository.GetServiceBusClient(fullyQualifiedNamespace);
 
         var allMessages = new List<ServiceBusReceivedMessage>();
 
-        if (queueProperties.Value.RequiresSession)
+        var receiver = serviceBusClient.CreateReceiver(entityPath);
+        while (allMessages.Count < maxMessages)
         {
-            while (allMessages.Count < maxMessages)
-            {
-                try
-                {
-                    var sessionReceiver = await serviceBusClient.AcceptNextSessionAsync(entityPath);
-                    var batch = await sessionReceiver.PeekMessagesAsync(maxMessages - allMessages.Count);
-                    allMessages.AddRange(batch);
-                    await sessionReceiver.CloseAsync();
-                    if (batch.Count == 0) break;
-                }
-                catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.ServiceTimeout)
-                {
-                    break;
-                }
-            }
-        }
-        else
-        {
-            var receiver = serviceBusClient.CreateReceiver(entityPath);
-            while (allMessages.Count < maxMessages)
-            {
-                var batch = await receiver.PeekMessagesAsync(maxMessages - allMessages.Count);
-                if (batch.Count == 0)
-                    break;
-                allMessages.AddRange(batch);
-            }
+            var batch = await receiver.PeekMessagesAsync(maxMessages - allMessages.Count);
+            if (batch.Count == 0)
+                break;
+            allMessages.AddRange(batch);
         }
 
         return allMessages;
