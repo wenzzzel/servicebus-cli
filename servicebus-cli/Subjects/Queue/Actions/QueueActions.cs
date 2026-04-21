@@ -67,7 +67,9 @@ public class QueueActions(
             "📮 [bold]Queue Name[/]", 
             "[green]Active[/]", 
             "[red]Dead Letter[/]", 
-            "[blue]Scheduled[/]" 
+            "[blue]Scheduled[/]",
+            "Sessions",
+            "Safe to Resend"
         };
 
         var rows = new List<List<string>>();
@@ -77,12 +79,21 @@ public class QueueActions(
             var activeMessageCount = queueInfo.QueueRuntimeProperties.ActiveMessageCount;
             var deadLetterMessageCount = queueInfo.QueueRuntimeProperties.DeadLetterMessageCount;
             var scheduledMessageCount = queueInfo.QueueRuntimeProperties.ScheduledMessageCount;
+            var requiresSessions = queueInfo.QueueProperties.RequiresSession;
+            var safeToResend = GetSafeToResend(queueInfo.QueueProperties.UserMetadata);
 
             rows.Add(new List<string> {
                 queueInfo.QueueProperties.Name,
                 $"[green]{activeMessageCount}[/]",
                 $"[red]{deadLetterMessageCount}[/]",
-                $"[blue]{scheduledMessageCount}[/]"
+                $"[blue]{scheduledMessageCount}[/]",
+                requiresSessions ? "[yellow]Yes[/]" : "No",
+                safeToResend switch
+                {
+                    true => "[green]Yes[/]",
+                    false => "[red]No[/]",
+                    _ => "[grey]-[/]"
+                }
             });
         }
 
@@ -258,5 +269,27 @@ public class QueueActions(
             "This is usually a sign that there are new messages arriving while purging. The purging has stopped after the original count to avoid causing an infinite loop.",
             activeMessageCount.Value,
             deleteMessagesWorkload);
+    }
+
+    private static bool? GetSafeToResend(string? userMetadata)
+    {
+        if (string.IsNullOrWhiteSpace(userMetadata))
+            return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(userMetadata);
+            if (doc.RootElement.TryGetProperty("Grip", out var grip) &&
+                grip.TryGetProperty("safeToResend", out var safeToResend) &&
+                (safeToResend.ValueKind == JsonValueKind.True || safeToResend.ValueKind == JsonValueKind.False))
+            {
+                return safeToResend.GetBoolean();
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return null;
     }
 }
