@@ -279,8 +279,8 @@ public class QueueActions(
         try
         {
             using var doc = JsonDocument.Parse(userMetadata);
-            if (doc.RootElement.TryGetProperty("Grip", out var grip) &&
-                grip.TryGetProperty("safeToResend", out var safeToResend) &&
+            if (doc.RootElement.TryGetProperty("GRIP", out var grip) &&
+                grip.TryGetProperty("safeToReload", out var safeToResend) &&
                 (safeToResend.ValueKind == JsonValueKind.True || safeToResend.ValueKind == JsonValueKind.False))
             {
                 return safeToResend.GetBoolean();
