@@ -31,6 +31,9 @@ public class Queue(IHelp _helpSubject, IQueueActions _queueActions, IConsoleServ
             case "purge":
                 await _queueActions.Purge(args.Skip(1).ToList());
                 break;
+            case "edit-metadata":
+                await _queueActions.EditMetadata(args.Skip(1).ToList());
+                break;
             default:
                 _helpSubject.Run();
                 break;

@@ -16,6 +16,8 @@ public interface IServiceBusService
     Task<IReadOnlyList<ServiceBusReceivedMessage>> PeekDeadLetterMessages(string fullyQualifiedNamespace, string entityPath, int maxMessages = 1000);
     Task<IReadOnlyList<ServiceBusReceivedMessage>> PeekMessages(string fullyQualifiedNamespace, string entityPath, int maxMessages = 1000);
     Task<Func<Task<IReadOnlyList<ServiceBusReceivedMessage>>>> CreateQueuePurgeWorkload(string fullyQualifiedNamespace, string entityPath);
+    Task<string?> GetQueueUserMetadata(string fullyQualifiedNamespace, string entityPath);
+    Task UpdateQueueUserMetadata(string fullyQualifiedNamespace, string entityPath, string? userMetadata);
 }
 
 public class ServiceBusService(IServiceBusRepository _serviceBusRepository) : IServiceBusService
@@ -181,5 +183,20 @@ public class ServiceBusService(IServiceBusRepository _serviceBusRepository) : IS
         var connection = new ServiceBusConnection(deadletterReceiver, messageReceiver, sender, runtimeProperties, queueProperties);
 
         return connection;
+    }
+
+    public async Task<string?> GetQueueUserMetadata(string fullyQualifiedNamespace, string entityPath)
+    {
+        var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
+        var queueProperties = await adminClient.GetQueueAsync(entityPath);
+        return queueProperties.Value.UserMetadata;
+    }
+
+    public async Task UpdateQueueUserMetadata(string fullyQualifiedNamespace, string entityPath, string? userMetadata)
+    {
+        var adminClient = _serviceBusRepository.GetServiceBusAdministrationClient(fullyQualifiedNamespace);
+        var queueProperties = await adminClient.GetQueueAsync(entityPath);
+        queueProperties.Value.UserMetadata = userMetadata;
+        await adminClient.UpdateQueueAsync(queueProperties.Value);
     }
 }

@@ -62,6 +62,10 @@ public class Help : IHelp
         queuePurgeNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
         queuePurgeNode.AddNode("[dim]<EntityPath>[/] - Queue name");
 
+        var editMetadataNode = queueNode.AddNode("[green]edit-metadata[/] - Edit metadata on a queue");
+        editMetadataNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
+        editMetadataNode.AddNode("[dim]<EntityPath>[/] - Queue name");
+
         // Settings branch
         var settingsNode = tree.AddNode("[bold yellow]settings[/] - Local settings management operations");
         

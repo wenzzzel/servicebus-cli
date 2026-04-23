@@ -9,6 +9,7 @@ public interface IQueueActions
     Task List(List<string> args);
     Task Peek(List<string> args);
     Task Purge(List<string> args);
+    Task EditMetadata(List<string> args);
 }
 
 public class QueueActions(
@@ -269,6 +270,83 @@ public class QueueActions(
             "This is usually a sign that there are new messages arriving while purging. The purging has stopped after the original count to avoid causing an infinite loop.",
             activeMessageCount.Value,
             deleteMessagesWorkload);
+    }
+
+    public async Task EditMetadata(List<string> args)
+    {
+        var fullyQualifiedNamespace = "";
+        var entityPath = "";
+        var settingsFileContent = _fileService.GetConfigFileContent();
+        var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
+
+        switch (args.Count)
+        {
+            case 2:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                break;
+            default:
+                if (!savedNamespaces.FullyQualifiedNamespaces.Any())
+                {
+                    fullyQualifiedNamespace = await _consoleService.PromptFreeText(
+                        "Enter the [green]fully qualified namespace[/]:");
+                }
+                else
+                {
+                    fullyQualifiedNamespace = await _consoleService.PromptSelection(
+                        "Select a fully qualified namespace:",
+                        savedNamespaces.FullyQualifiedNamespaces);
+                }
+
+                _consoleService.WriteMarkup($"[grey]Selected fully qualified namespace: {fullyQualifiedNamespace}[/]");
+
+                var editMetadataQueuesWorkload = async () =>
+                {
+                    return await _serviceBusService.GetInformationAboutAllQueues(fullyQualifiedNamespace).ConfigureAwait(false);
+                };
+
+                var queues = await _consoleService.ProcessWorkloadWithSpinner(
+                    $"Fetching queues on {fullyQualifiedNamespace}...",
+                    editMetadataQueuesWorkload);
+
+                var selectedQueue = await _consoleService.PromptSelection(
+                    "Select a [green]queue[/]:",
+                    queues.Select(q => $"{q.QueueProperties.Name} ([green]{q.QueueRuntimeProperties.ActiveMessageCount}[/], [red]{q.QueueRuntimeProperties.DeadLetterMessageCount}[/], [blue]{q.QueueRuntimeProperties.ScheduledMessageCount}[/])").ToList(),
+                    enableSearch: true);
+
+                entityPath = selectedQueue.Split(' ')[0];
+
+                _consoleService.WriteMarkup($"[grey]Selected queue: {entityPath}[/]");
+
+                break;
+        }
+
+        var currentMetadata = await _serviceBusService.GetQueueUserMetadata(fullyQualifiedNamespace, entityPath);
+
+        if (string.IsNullOrWhiteSpace(currentMetadata))
+            _consoleService.WriteMarkup("[grey]No metadata currently set on this queue.[/]");
+        else
+        {
+            _consoleService.WriteMarkup("[grey]Current metadata:[/]");
+            _consoleService.WriteJson(currentMetadata);
+            _consoleService.WriteMarkup("");
+        }
+
+        var editedMetadata = await _consoleService.OpenInEditor(currentMetadata ?? "");
+
+        if (editedMetadata is null)
+            return;
+
+        var newMetadata = string.IsNullOrWhiteSpace(editedMetadata) ? null : editedMetadata;
+
+        if (newMetadata == currentMetadata)
+        {
+            _consoleService.WriteMarkup("[grey]No changes detected. Metadata was not updated.[/]");
+            return;
+        }
+
+        await _serviceBusService.UpdateQueueUserMetadata(fullyQualifiedNamespace, entityPath, newMetadata);
+        _consoleService.WriteSuccess($"Metadata updated for queue {entityPath}.");
     }
 
     private static bool? GetSafeToResend(string? userMetadata)

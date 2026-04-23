@@ -19,6 +19,7 @@ public interface IConsoleService
     Task<string> PromptForAction<ActionType>();
     Task<string> PromptSelection(string title, IEnumerable<string> choices, bool enableSearch = false);
     Task<string> PromptFreeText(string title, bool allowEmpty = false);
+    Task<string?> OpenInEditor(string currentContent);
     void WriteTable(List<string> headers, List<List<string>> rows);
     Task<T> ProcessWorkloadWithSpinner<T>(string message, Func<Task<T>> func);
     Task ProcessWorkloadWithStatusUpdates<TItem, TCollection>(
@@ -54,7 +55,7 @@ public class ConsoleService() : IConsoleService
             return PromptSelection("Action: ", ["resend", "purge", "peek"]);
 
         if (typeof(ActionType) == typeof(QueueActions))
-            return PromptSelection("Action: ", ["list", "peek", "purge"]);
+            return PromptSelection("Action: ", ["list", "peek", "purge", "edit-metadata"]);
 
         if (typeof(ActionType) == typeof(SettingsActions))
             return PromptSelection("Action: ", ["get", "set"]); //TODO: Add list action
@@ -89,6 +90,44 @@ public class ConsoleService() : IConsoleService
             return AnsiConsole.PromptAsync(new TextPrompt<string>(title).AllowEmpty());
 
         return AnsiConsole.PromptAsync(new TextPrompt<string>(title));
+    }
+
+    public async Task<string?> OpenInEditor(string currentContent)
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"servicebus-cli-{Guid.NewGuid()}.json");
+        await File.WriteAllTextAsync(tempFile, currentContent);
+
+        try
+        {
+            var editor = Environment.GetEnvironmentVariable("EDITOR") ?? "vi";
+            var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = editor,
+                Arguments = tempFile,
+                UseShellExecute = false
+            });
+
+            if (process is null)
+            {
+                WriteError($"Failed to launch editor '{editor}'.");
+                return null;
+            }
+
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                WriteError($"Editor exited with code {process.ExitCode}.");
+                return null;
+            }
+
+            return await File.ReadAllTextAsync(tempFile);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
     }
 
     public void WriteTable(List<string> headers, List<List<string>> rows)
