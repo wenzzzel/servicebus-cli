@@ -86,7 +86,8 @@ public class DeadletterActions(
         var resendMessagesWorkload = async () =>
         {
             var messages = await queue.DeadletterReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
-            var tasks = new List<Task>();
+
+            var batch = await queue.Sender.CreateMessageBatchAsync();
 
             foreach (var message in messages)
             {
@@ -95,9 +96,17 @@ public class DeadletterActions(
                 if (queue.QueueProperties.RequiresSession) //Only set session id if the queue supports sessions
                     sendMessage.SessionId = message.SessionId;
 
-                tasks.Add(queue.Sender.SendMessageAsync(sendMessage));
+                if (!batch.TryAddMessage(sendMessage))
+                {
+                    await queue.Sender.SendMessagesAsync(batch);
+                    batch = await queue.Sender.CreateMessageBatchAsync();
+                    batch.TryAddMessage(sendMessage);
+                }
             }
-            await Task.WhenAll(tasks);
+
+            if (batch.Count > 0)
+                await queue.Sender.SendMessagesAsync(batch);
+
             return messages;
         };
 
