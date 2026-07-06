@@ -9,6 +9,8 @@ public interface IHelp
 
 public class Help : IHelp
 {
+    private const string Version = "0.5.1";
+
     public void Run()
     {
         // Display the title with styling
@@ -16,6 +18,12 @@ public class Help : IHelp
             new FigletText("ServiceBus CLI")
                 .Centered()
                 .Color(Color.Blue));
+
+        // Display the version
+        AnsiConsole.Write(
+            new Markup($"[dim]Version {Version}[/]")
+                .Centered());
+        AnsiConsole.WriteLine();
 
         AnsiConsole.WriteLine();
         
@@ -38,6 +46,7 @@ public class Help : IHelp
         var resendNode = deadletterNode.AddNode("[green]resend[/] - Resend messages from dead letter queue");
         resendNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
         resendNode.AddNode("[dim]<EntityPath>[/] - Queue or topic name");
+        resendNode.AddNode("[dim]<MessageCount>[/] - Number of messages to resend");
         
         var purgeNode = deadletterNode.AddNode("[green]purge[/] - Remove all messages from dead letter queue");
         purgeNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
@@ -46,6 +55,7 @@ public class Help : IHelp
         var deadletterPeekNode = deadletterNode.AddNode("[green]peek[/] - View messages in dead letter queue");
         deadletterPeekNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
         deadletterPeekNode.AddNode("[dim]<EntityPath>[/] - Queue or topic name");
+        deadletterPeekNode.AddNode("[dim]<MessageCount>[/] - Number of messages to peek");
 
         // Queue branch
         var queueNode = tree.AddNode("[bold yellow]queue[/] - Queue management operations");
@@ -57,6 +67,7 @@ public class Help : IHelp
         var peekNode = queueNode.AddNode("[green]peek[/] - View messages in queue");
         peekNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
         peekNode.AddNode("[dim]<EntityPath>[/] - Queue name");
+        peekNode.AddNode("[dim]<MessageCount>[/] - Number of messages to peek");
 
         var queuePurgeNode = queueNode.AddNode("[green]purge[/] - Remove all messages from queue");
         queuePurgeNode.AddNode("[dim]<FullyQualifiedNamespace>[/] - Service Bus namespace");
@@ -84,7 +95,7 @@ public class Help : IHelp
         AnsiConsole.WriteLine();
 
         // Add example section
-        var examplePanel = new Panel("[bold]Example:[/]\n[cyan]servicebus-cli[/] [yellow]deadletter[/] [green]resend[/] [dim]myservicebus.servicebus.windows.net myqueue[/]")
+        var examplePanel = new Panel("[bold]Example:[/]\n[cyan]servicebus-cli[/] [yellow]deadletter[/] [green]resend[/] [dim]myservicebus.servicebus.windows.net myqueue 10[/]")
             .Border(BoxBorder.Rounded)
             .BorderColor(Color.Green)
             .Header("[bold green]Usage Example[/]");
