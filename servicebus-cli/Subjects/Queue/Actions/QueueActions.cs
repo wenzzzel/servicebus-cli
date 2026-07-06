@@ -24,7 +24,7 @@ public class QueueActions(
         var fullyQualifiedNamespace = "";
         var filter = "";
         var settingsFileContent = _fileService.GetConfigFileContent();
-        var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
+        var userSettings = _userSettingsService.Deserialize(settingsFileContent);
 
         switch (args.Count)
         {
@@ -36,7 +36,7 @@ public class QueueActions(
                 filter = args[1];
                 break;
             default:
-                if (!savedNamespaces.FullyQualifiedNamespaces.Any())
+                if (!userSettings.FullyQualifiedNamespaces.Any())
                 {
                     fullyQualifiedNamespace = await _consoleService.PromptFreeText("Enter the [green]fully qualified namespace[/]:");
                 }
@@ -44,7 +44,7 @@ public class QueueActions(
                 {
                     fullyQualifiedNamespace = await _consoleService.PromptSelection(
                         "Select a fully qualified namespace:",
-                        savedNamespaces.FullyQualifiedNamespaces
+                        userSettings.FullyQualifiedNamespaces
                     );
                 }
                 
@@ -64,14 +64,20 @@ public class QueueActions(
             $"Listing queues on {fullyQualifiedNamespace}...", 
             queueInfoWorkload);
 
+        var additionalColumns = userSettings.AdditionalColumns ?? new Dictionary<string, string>();
+
         var headers = new List<string> { 
             "📮 [bold]Queue Name[/]", 
             "[green]Active[/]", 
             "[red]Dead Letter[/]", 
             "[blue]Scheduled[/]",
-            "Sessions",
-            "Safe to Resend"
+            "Sessions"
         };
+
+        foreach (var column in additionalColumns)
+        {
+            headers.Add(column.Key);
+        }
 
         var rows = new List<List<string>>();
 
@@ -81,21 +87,22 @@ public class QueueActions(
             var deadLetterMessageCount = queueInfo.QueueRuntimeProperties.DeadLetterMessageCount;
             var scheduledMessageCount = queueInfo.QueueRuntimeProperties.ScheduledMessageCount;
             var requiresSessions = queueInfo.QueueProperties.RequiresSession;
-            var safeToResend = GetSafeToResend(queueInfo.QueueProperties.UserMetadata);
 
-            rows.Add(new List<string> {
-                queueInfo.QueueProperties.Name,
-                $"[green]{activeMessageCount}[/]",
-                $"[red]{deadLetterMessageCount}[/]",
-                $"[blue]{scheduledMessageCount}[/]",
-                requiresSessions ? "[yellow]Yes[/]" : "No",
-                safeToResend switch
-                {
-                    true => "[green]Yes[/]",
-                    false => "[red]No[/]",
-                    _ => "[grey]-[/]"
-                }
-            });
+            var row = new List<string> {
+                        queueInfo.QueueProperties.Name,
+                        $"[green]{activeMessageCount}[/]",
+                        $"[red]{deadLetterMessageCount}[/]",
+                        $"[blue]{scheduledMessageCount}[/]",
+                        requiresSessions ? "[yellow]Yes[/]" : "No"
+                    };
+
+            foreach (var column in additionalColumns)
+            {
+                var value = GetQueueMetadataStringValue(queueInfo.QueueProperties.UserMetadata, column.Value);
+                row.Add(value ?? "");
+            }
+
+            rows.Add(row);
         }
 
         _consoleService.WriteTable(headers, rows);
@@ -370,4 +377,60 @@ public class QueueActions(
 
         return null;
     }
+
+    private static string? GetQueueMetadataStringValue(string? userMetadata, string propertyPath)
+    {
+        if (string.IsNullOrWhiteSpace(userMetadata))
+            return "[grey]-[/]";
+
+        var properties = propertyPath.Split('.');
+
+        try
+        {
+            using var doc = JsonDocument.Parse(userMetadata);
+            JsonElement currentElement = doc.RootElement;
+            foreach (var property in properties)
+            {
+                if (currentElement.ValueKind == JsonValueKind.Object &&
+                    currentElement.TryGetProperty(property, out var nextElement))
+                {
+                    currentElement = nextElement;
+                }
+                else
+                {
+                    return "[grey]-[/]";
+                }
+            }
+
+            var value = currentElement.ValueKind switch
+            {
+                JsonValueKind.String => currentElement.GetString(),
+                JsonValueKind.Null => null,
+                _ => currentElement.GetRawText()
+            };
+
+
+
+            return PrettifyColumnValues(value);
+        }
+        catch (JsonException)
+        {
+        }
+
+        return "[grey]-[/]";
+    }
+
+    private static string? PrettifyColumnValues(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "[grey]-[/]";
+
+        if (value.Equals("true", StringComparison.OrdinalIgnoreCase))
+            return "[green]Yes[/]";
+        if (value.Equals("false", StringComparison.OrdinalIgnoreCase))
+            return "[red]No[/]";
+
+        return value;
+    }
+
 }
