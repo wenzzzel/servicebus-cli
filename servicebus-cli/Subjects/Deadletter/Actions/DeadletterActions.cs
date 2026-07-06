@@ -21,6 +21,7 @@ public class DeadletterActions(
     {
         var fullyQualifiedNamespace = "";
         var entityPath = "";
+        long messagesCountToResend = 0;
         var settingsFileContent = _fileService.GetConfigFileContent();
         var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
 
@@ -29,6 +30,11 @@ public class DeadletterActions(
             case 2:
                 fullyQualifiedNamespace = args[0];
                 entityPath = args[1];
+                break;
+            case 3:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                messagesCountToResend = long.Parse(args[2]);
                 break;
             default:
                 if (!savedNamespaces.FullyQualifiedNamespaces.Any())
@@ -61,12 +67,27 @@ public class DeadletterActions(
 
                 entityPath = selectedQueue.Split(' ')[0];
 
+                var deadletterCount = await _serviceBusService.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
+                if (deadletterCount is null or 0)
+                {
+                    _consoleService.WriteError($"No deadletter messages found in queue {entityPath}");
+                    return;
+                }
+
+                messagesCountToResend = await _consoleService.PromptForLong(
+                    $"Enter the [green]number of deadletter messages[/] to resend (max: {queues.First(q => q.QueueProperties.Name == entityPath).QueueRuntimeProperties.DeadLetterMessageCount}):",
+                    minValue: 1,
+                    maxValue: queues.First(q => q.QueueProperties.Name == entityPath).QueueRuntimeProperties.DeadLetterMessageCount);
+
+                if (messagesCountToResend == 0)
+                    messagesCountToResend = deadletterCount.Value;
+
                 _consoleService.WriteMarkup($"[grey]Selected queue: {entityPath}[/]");
 
                 break;
         }
 
-        var confirmed = await _consoleService.ConfirmWarning($"This action will resend all deadletter messages. Stopping the application before it's finished may result in data loss! Do you want to continue?");
+        var confirmed = await _consoleService.ConfirmWarning($"This action will resend {messagesCountToResend} deadletter messages. Stopping the application before it's finished may result in data loss! Do you want to continue?");
 
         if (!confirmed)
         {
@@ -74,23 +95,22 @@ public class DeadletterActions(
             return;
         }
 
-        var deadletterCount = await _serviceBusService.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
-        if (deadletterCount is null or 0)
-        {
-            _consoleService.WriteError($"No deadletter messages found in queue {entityPath}");
-            return;
-        }
+
 
         var queue = await _serviceBusService.ConnectToQueue(fullyQualifiedNamespace, entityPath);
 
         var resendMessagesWorkload = async () =>
         {
-            var messages = await queue.DeadletterReceiver.ReceiveMessagesAsync(1000, TimeSpan.FromSeconds(30));
+            var messageCount = 0;
+            var maxMessageBatchSize = messagesCountToResend > 1000 ? 1000 : (int)messagesCountToResend;
+            var messages = await queue.DeadletterReceiver.ReceiveMessagesAsync(maxMessageBatchSize, TimeSpan.FromSeconds(30));
 
             var batch = await queue.Sender.CreateMessageBatchAsync();
 
             foreach (var message in messages)
             {
+                messageCount++;
+
                 var sendMessage = new ServiceBusMessage(message);
 
                 if (queue.QueueProperties.RequiresSession) //Only set session id if the queue supports sessions
@@ -104,7 +124,7 @@ public class DeadletterActions(
                 }
             }
 
-            if (batch.Count > 0)
+            if (batch.Count > 0 && messageCount < messagesCountToResend)
                 await queue.Sender.SendMessagesAsync(batch);
 
             return messages;
@@ -114,7 +134,7 @@ public class DeadletterActions(
             "Resending",
             "Resent",
             "The count of resent messages was greater than the initial deadletter count. This may happen due to deadletters being re-sent and ending up on the deadletter queue again before the resend job was able to finish. It is an indicator that there are bad messages on your deadletter queue that should be handled and/or removed instead of resent. ",
-            deadletterCount.Value,
+            messagesCountToResend,
             resendMessagesWorkload);
     }
 
@@ -122,6 +142,7 @@ public class DeadletterActions(
     {
         var fullyQualifiedNamespace = "";
         var entityPath = "";
+        long messagesCountToPeek = 0;
         var settingsFileContent = _fileService.GetConfigFileContent();
         var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
 
@@ -130,6 +151,11 @@ public class DeadletterActions(
             case 2:
                 fullyQualifiedNamespace = args[0];
                 entityPath = args[1];
+                break;
+            case 3:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                messagesCountToPeek = long.Parse(args[2]);
                 break;
             default:
                 if (!savedNamespaces.FullyQualifiedNamespaces.Any())
@@ -162,14 +188,32 @@ public class DeadletterActions(
 
                 entityPath = selectedQueue.Split(' ')[0];
 
+                var deadletterCount = await _serviceBusService.GetDeadLetterCount(fullyQualifiedNamespace, entityPath);
+                if (deadletterCount is null or 0)
+                {
+                    _consoleService.WriteError($"No deadletter messages found in queue {entityPath}");
+                    return;
+                }
+
+                messagesCountToPeek = await _consoleService.PromptForLong(
+                    $"Enter the [green]number of deadletter messages[/] to peek (max: {queues.First(q => q.QueueProperties.Name == entityPath).QueueRuntimeProperties.DeadLetterMessageCount}):",
+                    minValue: 1,
+                    maxValue: queues.First(q => q.QueueProperties.Name == entityPath).QueueRuntimeProperties.DeadLetterMessageCount);
+
+                if (messagesCountToPeek == 0)
+                    messagesCountToPeek = deadletterCount.Value;
+
                 _consoleService.WriteMarkup($"[grey]Selected queue: {entityPath}[/]");
 
                 break;
         }
 
+        if (messagesCountToPeek > int.MaxValue)
+            messagesCountToPeek = int.MaxValue;
+
         var peekWorkload = async () =>
         {
-            return await _serviceBusService.PeekDeadLetterMessages(fullyQualifiedNamespace, entityPath).ConfigureAwait(false);
+            return await _serviceBusService.PeekDeadLetterMessages(fullyQualifiedNamespace, entityPath, (int)messagesCountToPeek).ConfigureAwait(false);
         };
 
         var messages = await _consoleService.ProcessWorkloadWithSpinner(

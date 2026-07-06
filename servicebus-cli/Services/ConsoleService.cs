@@ -19,6 +19,7 @@ public interface IConsoleService
     Task<string> PromptForAction<ActionType>();
     Task<string> PromptSelection(string title, IEnumerable<string> choices, bool enableSearch = false);
     Task<string> PromptFreeText(string title, bool allowEmpty = false);
+    Task<long> PromptForLong(string title, long minValue, long maxValue);
     Task<string?> OpenInEditor(string currentContent);
     void WriteTable(List<string> headers, List<List<string>> rows);
     Task<T> ProcessWorkloadWithSpinner<T>(string message, Func<Task<T>> func);
@@ -90,6 +91,14 @@ public class ConsoleService() : IConsoleService
             return AnsiConsole.PromptAsync(new TextPrompt<string>(title).AllowEmpty());
 
         return AnsiConsole.PromptAsync(new TextPrompt<string>(title));
+    }
+
+    public Task<long> PromptForLong(string title, long minValue, long maxValue)
+    {
+        return AnsiConsole.PromptAsync(new TextPrompt<long>(title)
+            .AllowEmpty()
+            .ValidationErrorMessage($"Please enter a number between {minValue} and {maxValue}.")
+            .Validate(value => value >= minValue && value <= maxValue));
     }
 
     public async Task<string?> OpenInEditor(string currentContent)

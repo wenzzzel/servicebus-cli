@@ -112,6 +112,7 @@ public class QueueActions(
     {
         var fullyQualifiedNamespace = "";
         var entityPath = "";
+        long messagesCountToPeek = 0;
         var settingsFileContent = _fileService.GetConfigFileContent();
         var savedNamespaces = _userSettingsService.Deserialize(settingsFileContent);
 
@@ -120,6 +121,11 @@ public class QueueActions(
             case 2:
                 fullyQualifiedNamespace = args[0];
                 entityPath = args[1];
+                break;
+            case 3:
+                fullyQualifiedNamespace = args[0];
+                entityPath = args[1];
+                messagesCountToPeek = long.Parse(args[2]);
                 break;
             default:
                 if (!savedNamespaces.FullyQualifiedNamespaces.Any())
@@ -152,6 +158,21 @@ public class QueueActions(
 
                 entityPath = selectedQueue.Split(' ')[0];
 
+                var activeMessageCount = await _serviceBusService.GetActiveMessageCount(fullyQualifiedNamespace, entityPath);
+                if (activeMessageCount is null or 0)
+                {
+                    _consoleService.WriteError($"No active messages found in queue {entityPath}");
+                    return;
+                }
+
+                messagesCountToPeek = await _consoleService.PromptForLong(
+                    $"Enter the [green]number of active messages[/] to peek (max: {queues.First(q => q.QueueProperties.Name == entityPath).QueueRuntimeProperties.ActiveMessageCount}):",
+                    minValue: 1,
+                    maxValue: queues.First(q => q.QueueProperties.Name == entityPath).QueueRuntimeProperties.ActiveMessageCount);
+
+                if (messagesCountToPeek == 0)
+                    messagesCountToPeek = activeMessageCount.Value;
+
                 _consoleService.WriteMarkup($"[grey]Selected queue: {entityPath}[/]");
 
                 break;
@@ -164,9 +185,12 @@ public class QueueActions(
             return;
         }
 
+        if (messagesCountToPeek > int.MaxValue)
+            messagesCountToPeek = int.MaxValue;
+
         var peekWorkload = async () =>
         {
-            return await _serviceBusService.PeekMessages(fullyQualifiedNamespace, entityPath).ConfigureAwait(false);
+            return await _serviceBusService.PeekMessages(fullyQualifiedNamespace, entityPath, (int)messagesCountToPeek).ConfigureAwait(false);
         };
 
         var messages = await _consoleService.ProcessWorkloadWithSpinner(
@@ -354,28 +378,6 @@ public class QueueActions(
 
         await _serviceBusService.UpdateQueueUserMetadata(fullyQualifiedNamespace, entityPath, newMetadata);
         _consoleService.WriteSuccess($"Metadata updated for queue {entityPath}.");
-    }
-
-    private static bool? GetSafeToResend(string? userMetadata)
-    {
-        if (string.IsNullOrWhiteSpace(userMetadata))
-            return null;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(userMetadata);
-            if (doc.RootElement.TryGetProperty("GRIP", out var grip) &&
-                grip.TryGetProperty("safeToReload", out var safeToResend) &&
-                (safeToResend.ValueKind == JsonValueKind.True || safeToResend.ValueKind == JsonValueKind.False))
-            {
-                return safeToResend.GetBoolean();
-            }
-        }
-        catch (JsonException)
-        {
-        }
-
-        return null;
     }
 
     private static string? GetQueueMetadataStringValue(string? userMetadata, string propertyPath)
